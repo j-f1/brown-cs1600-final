@@ -1,6 +1,6 @@
 int rows[] = {0, 1};
 #define nrows 2
-int cols[] = {2};
+int cols[] = {7};
 #define ncols 1
 
 char keymap[nrows][ncols] = {
@@ -9,6 +9,8 @@ char keymap[nrows][ncols] = {
 };
 
 void setup() {
+  Serial.begin(9600);
+  while (!Serial);
   for (int i = 0; i < nrows; i++) {
     pinMode(rows[i], INPUT);
   }
@@ -41,17 +43,18 @@ void loop() {
         Serial.print(" and ");
         Serial.println(i);
       } else {
-        row = i;
+        col = i;
       }
     }
   }
 
-  if (col != -1 && row != -1) {
+  if (row != -1 && col != -1) {
     Serial.print("Detected key press at ");
     Serial.print(col);
     Serial.print(", ");
     Serial.print(row);
     Serial.print(": ");
     Serial.print(keymap[row][col]);
+    Serial.println();
   }
 }
