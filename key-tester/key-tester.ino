@@ -1,3 +1,5 @@
+#include <Keyboard.h>
+
 int rows[] = {0, 1};
 #define nrows 2
 int cols[] = {7};
@@ -11,12 +13,14 @@ char keymap[nrows][ncols] = {
 void setup() {
   Serial.begin(9600);
   while (!Serial);
+  Keyboard.begin();
   for (int i = 0; i < nrows; i++) {
     pinMode(rows[i], INPUT);
   }
   for (int i = 0; i < ncols; i++) {
     pinMode(cols[i], INPUT);
   }
+  Keyboard.print("Hello!");
 }
 
 void loop() {
