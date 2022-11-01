@@ -16,13 +16,14 @@ void setup() {
   Keyboard.begin();
   for (int i = 0; i < nrows; i++) {
     pinMode(rows[i], INPUT);
+    attachInterrupt(digitalPinToInterrupt(rows[i]), onKeypress, RISING);
   }
   for (int i = 0; i < ncols; i++) {
     pinMode(cols[i], INPUT);
   }
 }
 
-void loop() {
+void onKeypress() {
   int row = -1;
   for (int i = 0; i < nrows; i++) {
     if (digitalRead(rows[i]) == HIGH) {
@@ -62,3 +63,5 @@ void loop() {
     Keyboard.print(keymap[row][col]);
   }
 }
+
+void loop() {}
