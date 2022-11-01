@@ -20,7 +20,6 @@ void setup() {
   for (int i = 0; i < ncols; i++) {
     pinMode(cols[i], INPUT);
   }
-  Keyboard.print("Hello!");
 }
 
 void loop() {
@@ -60,5 +59,6 @@ void loop() {
     Serial.print(": ");
     Serial.print(keymap[row][col]);
     Serial.println();
+    Keyboard.print(keymap[row][col]);
   }
 }
