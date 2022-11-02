@@ -12,8 +12,8 @@ HttpClient httpClient(wifiClient);
 //char host[] = "https://api.openai.com";
 //char endpoint[] = "/v1/completions";
 
-char host[] = "arduino.cc";
-char endpoint[] = "/";
+char host[] = "dummyjson.com";
+char endpoint[] = "/todos/1";
 
 void setup() {
   // Initialize serial connection
@@ -34,8 +34,14 @@ void setup() {
 void loop() {
   Serial.println("Sending get request");
   int err = httpClient.get(host, endpoint);
-  Serial.print("Error code: ");
-  Serial.println(err);
+
+  if (!err) {
+    Serial.println(httpClient.responseStatusCode());
+  } else {
+    Serial.print("Error code: ");
+    Serial.println(err);
+  }
+
   httpClient.stop();
   delay(2500);
 }
