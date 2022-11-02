@@ -12,8 +12,8 @@ HttpClient httpClient(wifiClient);
 //char host[] = "https://api.openai.com";
 //char endpoint[] = "/v1/completions";
 
-char host[] = "https://dummyjson.com/todos";
-char endpoint[] = "/todos";
+char host[] = "arduino.cc";
+char endpoint[] = "/";
 
 void setup() {
   // Initialize serial connection
@@ -24,7 +24,6 @@ void setup() {
   while (status != WL_CONNECTED) {
     Serial.println("Attempting to connect");
     status = WiFi.begin(ssid);
-    Serial.println("Test");
     delay(5000);
   }
   Serial.println("Connected to wifi");
@@ -32,8 +31,9 @@ void setup() {
 
 void loop() {
   Serial.println("Sending get request");
-  int responseCode = httpClient.get(host, endpoint);
-  Serial.print("Response code: ");
-  Serial.println(responseCode);
+  int err = httpClient.get(host, endpoint);
+  Serial.print("Error code: ");
+  Serial.println(err);
+  httpClient.stop();
   delay(2500);
 }
