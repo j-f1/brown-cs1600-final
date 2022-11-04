@@ -1,0 +1,1 @@
+Insert the missing vowels in the word "${input}", which is missing all of its vowels: "
