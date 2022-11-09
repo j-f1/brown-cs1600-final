@@ -2,12 +2,12 @@
 
 int rows[] = {0, 1};
 #define nrows 2
-int cols[] = {7};
-#define ncols 1
+int cols[] = {7,6};
+#define ncols 2
 
 char keymap[nrows][ncols] = {
-  {'b'},
-  {'z'},
+  {'b', 'm'},
+  {'z', 'j'},
 };
 
 void setup() {
@@ -43,7 +43,7 @@ void onKeypress() {
     }
   }
 
-  int col = 0;
+  int col = -1;
   for (int i = 0; i < ncols; i++) {
     if (digitalRead(cols[i]) == HIGH) {
       if (i == 1) {
