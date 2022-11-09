@@ -44,7 +44,8 @@ bool make_request(const char *word, char *result, size_t result_len) {
     if (!client.available()) continue;
     char c = client.read();
     if (copying) {
-      if (result_idx == result_len) {
+      if (result_idx == result_len - 1) {
+        result[result_idx] = 0;
         return true;
       }
       result[result_idx++] = c;
@@ -58,5 +59,6 @@ bool make_request(const char *word, char *result, size_t result_len) {
     }
   }
   Serial.println("received all!");
+  result[result_idx] = 0;
   return true;
 }
