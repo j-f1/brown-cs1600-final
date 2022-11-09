@@ -11,8 +11,12 @@ void setup() {
   setup_wifi();
 
   char result[200];
-  if (make_request("hll", result, 200)) {
-    Keyboard.print(result);
+  Serial.setTimeout(10e3);
+  while (true) {
+    String prompt = Serial.readStringUntil('\n');
+    if (prompt.length() && make_request(prompt.c_str(), result, 200)) {
+      Keyboard.print(result);
+    }
   }
 }
 
