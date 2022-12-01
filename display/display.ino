@@ -67,11 +67,11 @@ void display() {
     lcd.clear();
     
     lcd.setCursor(0, 0);
-    for (int i = cursor; i < min(ncols, buflen); i++) {
-        if (buf[i] == '\0') {
+    for (int i = 0; i < min(ncols, buflen-cursor); i++) {
+        if (buf[cursor+i] == '\0') {
             lcd.print('|');
         } else {
-            lcd.print(buf[i]);
+            lcd.print(buf[cursor+i]);
         }
     }
 
