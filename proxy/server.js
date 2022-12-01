@@ -32,8 +32,16 @@ fastify.put("/", async function (request, reply) {
 
   const completion = await openai.createCompletion({
     model,
-    prompt: `Insert the missing vowels in the word "${input}", which is missing all of its vowels: "`,
-    stop: ['"'],
+    prompt: `Output up to ten valid, complete English corrections for words which are missing their vowels. Only add the letters A, E, I, O, or Y. Do not add any additional consonants or other characters in the corrections.
+Input: frnd
+Output: [ friend, frond ]
+Input: mmr
+Output: [ immure, memoir, memory, yammer, yummier ]
+Input: fld
+Output: [ afield, failed, field, filed, flayed, fled, flood, fluid, foaled, fold ]
+Input: ${input}
+Output: [`,
+    stop: [']'],
   });
 
   const cost = (pricing[model] * completion.data.usage.total_tokens) / 1000;
