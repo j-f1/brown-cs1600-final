@@ -7,6 +7,8 @@ char password[] = "";
 int status = WL_IDLE_STATUS;
 WiFiClient wifiClient;
 HttpClient httpClient(wifiClient);
+bool sending = false;
+bool success = false;
 
 // GPT-3 API setup
 char openAiHostname[] = "https://api.openai.com";
@@ -34,10 +36,11 @@ void setup() {
 void loop() {
   Serial.println("Sending get request");
   int err = httpClient.get(host, endpoint);
+  
 
   if (!err) {
     if (httpClient.responseStatusCode() >= 200 && httpClient.responseStatusCode() <= 299) {
-      
+    
     } else {
       Serial.print("Response returned a non-success status code: ");
       Serial.println(httpClient.responseStatusCode());
@@ -70,10 +73,13 @@ JSONVar createOpenAiApiRequest(String unvoweledWord) {
 
 JSONVar getTextCompletion() {
   int err = httpClient.post(openAiHostname, completionsEndpoint);
+  sending = true;
+  success = false;
 
   if (!err) {
     if (httpClient.responseStatusCode() >= 200 && httpClient.responseStatusCode() <= 299) {
       Serial.println("Successful response received");
+      success = true;
       // TODO: handle payload here, see https://github.com/amcewen/HttpClient/blob/master/HttpClient.h
     } else {
       Serial.print("Response returned a non-success status code: ");
@@ -101,4 +107,5 @@ JSONVar getTextCompletion() {
         break;
     }
   }
+  sending = false;
 }
