@@ -24,6 +24,12 @@ int bufLenProcessed;
 
 char gptResult[200];
 
+int rPin = A2; 
+int gPin = A3;
+int bPin = A4;
+int pwmVal = 5;
+int dir = 1;
+
 void setup() {
   Serial.begin(9600);
   Keyboard.begin();
@@ -41,6 +47,9 @@ void setup() {
   activeRow = 0;
   lastKeypressMillis = millis();
   memset(buf, 0, bufcap);
+  pinMode(rPin, OUTPUT);
+  pinMode(gPin, OUTPUT);
+  pinMode(bPin, OUTPUT);
 }
 
 void loop() {
@@ -54,6 +63,15 @@ void loop() {
     char c = buf[(bufStart + bufLenProcessed) % bufcap];
     Keyboard.print(c);
     bufLenProcessed++;
+    
+    //led indicator pulse yellow while idle/standing by for request
+    analogWrite(rPin, pwmVal);
+    analogWrite(gPin, pwmVal);
+    analogWrite(bPin, 0);
+    pwmVal += 10 * dir;
+    if (pwmVal == 255) {
+      dir = -dir;
+    }
   }
   interrupts();
 
@@ -62,6 +80,13 @@ void loop() {
   if (millis() - lastKeypressMillis > completionDelayMillis) {
     noInterrupts();
     static char[bufcap] word;
+    
+    //sending word to gpt3 led off
+    analogWrite(rPin, 0);
+    analogWrite(gPin, 0);
+    analogWrite(bPin, 0);
+    pwmVal = 5;
+    dir = 1;
 
     // Scan backwards to find the start of the last word
     for (int wordLen = 0; wordLen < bufLen; wordLen++) {
@@ -76,8 +101,17 @@ void loop() {
 
     if (make_request(word, gptResult, 200)) {
       Serial1.write(gptResult);
+      //success led green
+      analogWrite(gPin, 255);
+      analogWrite(bPin, 0);
+      analogWrite(rPin, 0);
     } else {
       // TODO: handle error
+
+      //errror led red
+      analogWrite(rPin, 255);
+      analogWrite(bPin, 0);
+      analogWrite(gPin, 0);
     }
     interrupts();
   }
