@@ -6,9 +6,9 @@ int cols[] = {4,5,6,7,8,9,0};
 #define ncols 7
 
 char keymap[nrows][ncols] = {
-  {'a', 'a', 'a', 'a', 'a', 'a', 'a'},
-  {'a', 'a', 'a', 'a', 'a', 'a', 'a'},
-  {'a', 'a', 'a', 'a', 'a', 'a', 'a'},
+  {'p', 'l', 'k', 'j', 'h', 'g', 'f'},
+  {'t', 'r', 'd', 's', 'w', 'q', 'a'},
+  {'m', 'n', 'b', 'v', 'c', 'x', 'z'},
 };
 
 int activeRow;
