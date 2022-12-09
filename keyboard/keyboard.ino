@@ -11,8 +11,6 @@ char keymap[nrows][ncols] = {
   {'m', 'n', 'b', 'v', 'c', 'x', 'z'},
 };
 
-int activeRow;
-
 const int completionDelayMillis = 1000;
 int lastKeypressMillis;
 
@@ -36,15 +34,15 @@ void setup() {
 
   for (int i = 0; i < nrows; i++) {
     pinMode(rows[i], OUTPUT);
+    digitalWrite(rows[i], HIGH);
   }
   for (int i = 0; i < ncols; i++) {
     pinMode(cols[i], INPUT);
     attachInterrupt(digitalPinToInterrupt(cols[i]), onKeypress, RISING);
   }
   
-  setup_wifi();
+  //setup_wifi();
   setupWDT();
-  activeRow = 0;
   lastKeypressMillis = millis();
   memset(buf, 0, bufcap);
   pinMode(rPin, OUTPUT);
@@ -53,25 +51,21 @@ void setup() {
 }
 
 void loop() {
-  digitalWrite(rows[activeRow], LOW);
-  activeRow = (activeRow + 1) % nrows;
-  digitalWrite(rows[activeRow], HIGH);
-
+  // led indicator pulse green while idle/standing by for request
+  analogWrite(rPin, 0);
+  analogWrite(gPin, pwmVal);
+  analogWrite(bPin, 0);
+  pwmVal += 10 * dir;
+  if (pwmVal == 255 || pwmVal == 5) {
+    dir = -dir;
+  }
+  
   // Send new keypresses to computer
   noInterrupts();
   while (bufLenProcessed < bufLen) {
     char c = buf[(bufStart + bufLenProcessed) % bufcap];
     Keyboard.print(c);
     bufLenProcessed++;
-    
-    //led indicator pulse yellow while idle/standing by for request
-    analogWrite(rPin, pwmVal);
-    analogWrite(gPin, pwmVal);
-    analogWrite(bPin, 0);
-    pwmVal += 10 * dir;
-    if (pwmVal == 255) {
-      dir = -dir;
-    }
   }
   interrupts();
 
@@ -79,15 +73,16 @@ void loop() {
   // request completions from GPT-3
   if (millis() - lastKeypressMillis > completionDelayMillis) {
     noInterrupts();
-    static char[bufcap] word;
+    static char word[bufcap];
     
-    //sending word to gpt3 led off + reset vals
-    analogWrite(rPin, 0);
-    analogWrite(gPin, 0);
+    // Sending word to gpt3: led off + reset vals
+    analogWrite(rPin, 255);
+    analogWrite(gPin, 255);
     analogWrite(bPin, 0);
     pwmVal = 5;
     dir = 1;
 
+    /*
     // Scan backwards to find the start of the last word
     for (int wordLen = 0; wordLen < bufLen; wordLen++) {
       char c = buf[(bufStart+bufLen-wordLen-1) % bufcap];
@@ -98,21 +93,24 @@ void loop() {
         word[wordLen] = c;
       }
     }
+    Serial.println(word);
+    delay(1000);
 
     if (make_request(word, gptResult, 200)) {
       Serial1.write(gptResult);
-      //success led green
+      // Success led green
       analogWrite(gPin, 255);
       analogWrite(bPin, 0);
       analogWrite(rPin, 0);
     } else {
       // TODO: handle error
 
-      //errror led red
+      // Error led red
       analogWrite(rPin, 255);
       analogWrite(bPin, 0);
       analogWrite(gPin, 0);
     }
+    */
     interrupts();
   }
 
@@ -121,24 +119,40 @@ void loop() {
 }
 
 void onKeypress() {
-  Serial.println("Key pressed");
-  for (int col = 0; col < ncols; col++) {
-    if (digitalRead(cols[col]) == HIGH) {
-      Serial.print("Detected key press at ");
-      Serial.print(col);
-      Serial.print(", ");
-      Serial.print(activeRow);
-      Serial.print(": ");
-      Serial.print(keymap[activeRow][col]);
-      Serial.println();
-      if (bufLen < bufcap) {
-        buf[(bufStart + bufLen) % bufcap] = keymap[activeRow][col];
-        bufLen++;
-        lastKeypressMillis = millis();
-      } // TODO: how to handle full buffer
-      break; // TODO: how to handle multiple active cols
-    }
+  noInterrupts();
+  for (int row = 0; row < nrows; row++) {
+    digitalWrite(rows[row], LOW);
   }
+  int activeRow = -1;
+  int activeCol = -1;
+  bool err = false;
+  for (int row = 0; row < nrows; row++) {
+    digitalWrite(rows[row], HIGH);
+    for (int col = 0; col < ncols; col++) {
+      if (digitalRead(cols[col]) == HIGH) {
+        if (activeRow == -1 && activeCol == -1) {
+          activeRow = row;
+          activeCol = col;
+        } else {
+          err = true;
+        }
+      }
+    }
+    digitalWrite(rows[row], LOW);
+  }
+  if (activeRow != -1 && activeCol != -1 && !err) {
+    if (bufLen < bufcap && millis() - lastKeypressMillis > 5) {
+      Serial.print("Detected key press at ");
+      Serial.print(millis());
+      buf[(bufStart + bufLen) % bufcap] = keymap[activeRow][activeCol];
+      bufLen++;
+      lastKeypressMillis = millis();
+    } // TODO: how to handle full buffer
+  }
+  for (int row = 0; row < nrows; row++) {
+    digitalWrite(rows[row], HIGH);
+  }
+  interrupts();
 }
 
 // Set up a 4s watchdog timer
