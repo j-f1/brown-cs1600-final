@@ -1,83 +1,58 @@
 #include <Keyboard.h>
 
-int rows[] = {0, 1};
-#define nrows 2
-int cols[] = {7,6};
-#define ncols 2
+int rows[] = {1,2,3};
+#define nrows 3
+int cols[] = {4,5,6,7,8,9,0};
+#define ncols 7
 
 char keymap[nrows][ncols] = {
-  {'b', 'm'},
-  {'z', 'j'},
+  {'a', 'a', 'a', 'a', 'a', 'a', 'a'},
+  {'a', 'a', 'a', 'a', 'a', 'a', 'a'},
+  {'a', 'a', 'a', 'a', 'a', 'a', 'a'},
 };
+
+int activeRow;
 
 void setup() {
   Serial.begin(9600);
-  while (!Serial);
   Keyboard.begin();
+
   for (int i = 0; i < nrows; i++) {
-    pinMode(rows[i], INPUT);
-    attachInterrupt(digitalPinToInterrupt(rows[i]), onKeypress, RISING);
+    pinMode(rows[i], OUTPUT);
   }
   for (int i = 0; i < ncols; i++) {
     pinMode(cols[i], INPUT);
+    attachInterrupt(digitalPinToInterrupt(cols[i]), onKeypress, RISING);
   }
   
   setupWDT();
-}
-
-void onKeypress() {
-  Serial.println("press");
-  int row = -1;
-  for (int i = 0; i < nrows; i++) {
-    if (digitalRead(rows[i]) == HIGH) {
-      if (i == 1) {
-      Serial.print("this is the j row: ");
-      Serial.println(i);
-      }
-      if (row != -1) {
-        Serial.print("Detected multiple rows pressed! ");
-        Serial.print(row);
-        Serial.print(" and ");
-        Serial.println(i);
-      } else {
-        row = i;
-      }
-    }
-  }
-
-  int col = -1;
-  for (int i = 0; i < ncols; i++) {
-    if (digitalRead(cols[i]) == HIGH) {
-      if (i == 1) {
-      Serial.print("this is the j col: ");
-      Serial.println(i);
-      }
-      if (col != -1) {
-        Serial.print("Detected multiple cols pressed! ");
-        Serial.print(col);
-        Serial.print(" and ");
-        Serial.println(i);
-      } else {
-        col = i;
-      }
-    }
-  }
-//should be outputting j
-  if (row != -1 && col != -1) {
-    Serial.print("Detected key press at ");
-    Serial.print(col);
-    Serial.print(", ");
-    Serial.print(row);
-    Serial.print(": ");
-    Serial.print(keymap[row][col]);
-    Serial.println();
-    Keyboard.print(keymap[row][col]);
-  }
+  activeRow = 0;
 }
 
 void loop() {
+  digitalWrite(rows[activeRow], LOW);
+  activeRow = (activeRow + 1) % nrows;
+  digitalWrite(rows[activeRow], HIGH);
+
   // Pet the watchdog
   WDT->CLEAR.reg = 0xA5;
+}
+
+void onKeypress() {
+  Serial.println("Key pressed");
+  for (int col = 0; col < ncols; col++) {
+    if (digitalRead(cols[col]) == HIGH) {
+      Serial.print("Detected key press at ");
+      Serial.print(col);
+      Serial.print(", ");
+      Serial.print(activeRow);
+      Serial.print(": ");
+      Serial.print(keymap[activeRow][col]);
+      Serial.println();
+      Keyboard.print(keymap[activeRow][col]);
+      break; // TODO: how to handle multiple active cols
+    }
+  }
 }
 
 // Set up a 4s watchdog timer
