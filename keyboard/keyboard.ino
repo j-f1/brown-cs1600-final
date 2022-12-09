@@ -22,6 +22,8 @@ int bufStart;
 int bufLen;
 int bufLenProcessed;
 
+char gptResult[200];
+
 void setup() {
   Serial.begin(9600);
   Keyboard.begin();
@@ -34,6 +36,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(cols[i]), onKeypress, RISING);
   }
   
+  setup_wifi();
   setupWDT();
   activeRow = 0;
   lastKeypressMillis = millis();
@@ -57,6 +60,26 @@ void loop() {
   // If it's been a second since the last keypress,
   // request completions from GPT-3
   if (millis() - lastKeypressMillis > completionDelayMillis) {
+    noInterrupts();
+    static char[bufcap] word;
+
+    // Scan backwards to find the start of the last word
+    for (int wordLen = 0; wordLen < bufLen; wordLen++) {
+      char c = buf[(bufStart+bufLen-wordLen-1) % bufcap];
+      if (c == ' ') {
+        word[wordLen] = '\0';
+        break;
+      } else {
+        word[wordLen] = c;
+      }
+    }
+
+    if (make_request(word, gptResult, 200)) {
+      Serial1.write(gptResult);
+    } else {
+      // TODO: handle error
+    }
+    interrupts();
   }
 
   // Pet the watchdog
