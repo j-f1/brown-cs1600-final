@@ -81,7 +81,7 @@ void loop() {
     noInterrupts();
     static char[bufcap] word;
     
-    //sending word to gpt3 led off
+    //sending word to gpt3 led off + reset vals
     analogWrite(rPin, 0);
     analogWrite(gPin, 0);
     analogWrite(bPin, 0);
