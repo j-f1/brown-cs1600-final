@@ -13,6 +13,15 @@ char keymap[nrows][ncols] = {
 
 int activeRow;
 
+const int completionDelayMillis = 1000;
+int lastKeypressMillis;
+
+#define bufcap 256
+char buf[bufcap];
+int bufStart;
+int bufLen;
+int bufLenProcessed;
+
 void setup() {
   Serial.begin(9600);
   Keyboard.begin();
@@ -27,12 +36,28 @@ void setup() {
   
   setupWDT();
   activeRow = 0;
+  lastKeypressMillis = millis();
+  memset(buf, 0, bufcap);
 }
 
 void loop() {
   digitalWrite(rows[activeRow], LOW);
   activeRow = (activeRow + 1) % nrows;
   digitalWrite(rows[activeRow], HIGH);
+
+  // Send new keypresses to computer
+  noInterrupts();
+  while (bufLenProcessed < bufLen) {
+    char c = buf[(bufStart + bufLenProcessed) % bufcap];
+    Keyboard.print(c);
+    bufLenProcessed++;
+  }
+  interrupts();
+
+  // If it's been a second since the last keypress,
+  // request completions from GPT-3
+  if (millis() - lastKeypressMillis > completionDelayMillis) {
+  }
 
   // Pet the watchdog
   WDT->CLEAR.reg = 0xA5;
@@ -49,7 +74,11 @@ void onKeypress() {
       Serial.print(": ");
       Serial.print(keymap[activeRow][col]);
       Serial.println();
-      Keyboard.print(keymap[activeRow][col]);
+      if (bufLen < bufcap) {
+        buf[(bufStart + bufLen) % bufcap] = keymap[activeRow][col];
+        bufLen++;
+        lastKeypressMillis = millis();
+      } // TODO: how to handle full buffer
       break; // TODO: how to handle multiple active cols
     }
   }
