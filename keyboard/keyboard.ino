@@ -11,8 +11,9 @@ char keymap[nrows][ncols] = {
   {'m', 'n', 'b', 'v', 'c', 'x', 'z'},
 };
 
-const int completionDelayMillis = 1000;
+const int completionDelayMillis = 100;
 int lastKeypressMillis;
+bool completionRequested;
 
 #define bufcap 256
 char buf[bufcap];
@@ -22,8 +23,8 @@ int bufLenProcessed;
 
 char gptResult[200];
 
-int rPin = A2; 
-int gPin = A3;
+int rPin = A3; 
+int gPin = 11;
 int bPin = A4;
 int pwmVal = 5;
 int dir = 1;
@@ -41,9 +42,10 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(cols[i]), onKeypress, RISING);
   }
   
-  //setup_wifi();
+  setup_wifi();
   setupWDT();
   lastKeypressMillis = millis();
+  completionRequested = true;
   memset(buf, 0, bufcap);
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
@@ -65,13 +67,14 @@ void loop() {
   while (bufLenProcessed < bufLen) {
     char c = buf[(bufStart + bufLenProcessed) % bufcap];
     Keyboard.print(c);
+    completionRequested = false;
     bufLenProcessed++;
   }
   interrupts();
 
   // If it's been a second since the last keypress,
   // request completions from GPT-3
-  if (millis() - lastKeypressMillis > completionDelayMillis) {
+  if (!completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
     noInterrupts();
     static char word[bufcap];
     
@@ -82,35 +85,40 @@ void loop() {
     pwmVal = 5;
     dir = 1;
 
-    /*
     // Scan backwards to find the start of the last word
-    for (int wordLen = 0; wordLen < bufLen; wordLen++) {
-      char c = buf[(bufStart+bufLen-wordLen-1) % bufcap];
-      if (c == ' ') {
-        word[wordLen] = '\0';
+    int wordLen;
+    for (wordLen = 0; wordLen < bufLen; wordLen++) {
+      if (buf[(bufStart+bufLen-wordLen-1) % bufcap] == ' ') {
         break;
-      } else {
-        word[wordLen] = c;
       }
     }
-    Serial.println(word);
-    delay(1000);
-
-    if (make_request(word, gptResult, 200)) {
-      Serial1.write(gptResult);
-      // Success led green
-      analogWrite(gPin, 255);
-      analogWrite(bPin, 0);
-      analogWrite(rPin, 0);
-    } else {
-      // TODO: handle error
-
-      // Error led red
-      analogWrite(rPin, 255);
-      analogWrite(bPin, 0);
-      analogWrite(gPin, 0);
+    for (int i = 0; i < wordLen; i++) {
+      Serial.println(buf[(bufStart+bufLen-wordLen+i) % bufcap]);
+      word[i] = buf[(bufStart+bufLen-wordLen+i) % bufcap];
     }
-    */
+    word[wordLen] = '\0';
+
+    Serial.println("processing word");
+    Serial.println(wordLen);
+    if (wordLen > 0) {
+      Serial.println(word);
+      if (make_request(word, gptResult, 200)) {
+        Serial.println(gptResult);
+        // Success led green
+        analogWrite(gPin, 255);
+        analogWrite(bPin, 0);
+        analogWrite(rPin, 0);
+      } else {
+        Serial.println("failure");
+  
+        // Error led red
+        analogWrite(rPin, 255);
+        analogWrite(bPin, 0);
+        analogWrite(gPin, 0);
+      }
+      delay(10000);
+    }
+    completionRequested = true;
     interrupts();
   }
 
@@ -143,10 +151,11 @@ void onKeypress() {
   if (activeRow != -1 && activeCol != -1 && !err) {
     if (bufLen < bufcap && millis() - lastKeypressMillis > 5) {
       Serial.print("Detected key press at ");
-      Serial.print(millis());
+      Serial.println(millis());
       buf[(bufStart + bufLen) % bufcap] = keymap[activeRow][activeCol];
       bufLen++;
       lastKeypressMillis = millis();
+      completionRequested = false;
     } // TODO: how to handle full buffer
   }
   for (int row = 0; row < nrows; row++) {

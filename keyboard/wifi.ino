@@ -15,11 +15,12 @@ void setup_wifi() {
     }
     delay(1000);
   }
-  Serial.println("Connected!");
+  Serial.println("Connected to WiFi!");
 }
 
 bool make_request(const char *word, char *result, size_t result_len) {
-  if (client.connect(host, 80)) {
+  Serial.println("Sending request");
+  if (client.connectSSL(host, 443)) {
     client.println("PUT / HTTP/1.1");
     client.print("Host: ");
     client.println(host);
@@ -31,6 +32,7 @@ bool make_request(const char *word, char *result, size_t result_len) {
     client.println(strlen(word));
     client.println();
     client.println(word);
+    Serial.println("Sent request");
   } else {
     Serial.println("Failed to fetch webpage");
     return false;
