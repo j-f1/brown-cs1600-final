@@ -184,39 +184,15 @@ void loop() {
   // request completions from GPT-3
   if (millis() - lastKeypressMillis > completionDelayMillis) {
     noInterrupts();
-    static char word[bufcap];
-
     setLedColor(0, 0, 0);
 
-    // Scan backwards to find the start of the last word
-    int wordLen;
-    for (wordLen = 0; wordLen < bufLen; wordLen++) {
-      if (buf[(bufStart+bufLen-wordLen-1) % bufcap] == ' ') {
-        break;
-      }
+    bool isCompletionSuccessful = completeWord();
+    if (isCompletionSuccessful) {
+      setLedColor(0, 255, 0);
+    } else {
+      setLedColor(255, 0, 255);
     }
-    for (int i = 0; i < wordLen; i++) {
-      Serial.println(buf[(bufStart+bufLen-wordLen+i) % bufcap]);
-      word[i] = buf[(bufStart+bufLen-wordLen+i) % bufcap];
-    }
-    word[wordLen] = '\0';
-
-    Serial.println("processing word");
-    Serial.println(wordLen);
-    if (wordLen > 0) {
-      Serial.println(word);
-      if (make_request(word, gptResult, 200)) {
-        Serial.println(gptResult);
-        // Success led green
-        setLedColor(0, 255, 0);
-      } else {
-        Serial.println("failure");
-
-        // Error led red
-        setLedColor(255, 0, 0);
-      }
-      delay(10000);
-    }
+    
     interrupts();
   }
 
@@ -334,8 +310,8 @@ void WDT_Handler() {
   WDT->INTFLAG.bit.EW = 1;
 
   // Warn user that a watchdog reset may happen
-  // TODO: light up status LED red
   Serial.println("Warning: watchdog reset imminent!");
+  setLedColor(255, 0, 0);
 }
 
 void petWatchdog() {
