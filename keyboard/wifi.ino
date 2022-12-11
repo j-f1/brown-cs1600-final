@@ -18,6 +18,8 @@ void setup_wifi() {
   Serial.println("Connected to WiFi!");
 }
 
+// Requests completions from GPT-3, writing a space-separated list of words
+// into `result` on success.
 bool makeRequest(const char *word, char *result, size_t result_len) {
   Serial.println("Sending request");
   if (client.connect(host, 80)) {
