@@ -152,7 +152,7 @@ bool completeWord() {
 
   // make the request to fill in the vowels
   char completedWord[BUFSIZE];
-  completionResult = makeRequest(curWord, completedWord, 200);
+  bool completionResult = makeRequest(curWord, completedWord, 200);
   if (!completionResult) {
     Serial.println("Error: failed to make word completion");
     return false;
@@ -177,7 +177,7 @@ bool completeWord() {
  * Main loop routine.
  */
 void loop() {
-  ledInidicateIdle();
+  ledIndicateIdle();
   sendNewKeypresses();
 
   // If it's been a second since the last keypress,
