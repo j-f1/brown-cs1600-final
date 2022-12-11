@@ -12,7 +12,7 @@ char keymap[NROWS][NCOLS] = {
 };
 
 // GPT completion setup
-const int completionDelayMillis = 5000;
+const int completionDelayMillis = 100;
 int lastKeypressMillis;
 bool completionRequested;
 
@@ -96,8 +96,8 @@ void initializeLedPins() {
 void setup() {
   // Initialize serial & keyboard
   Serial.begin(9600);
+  Serial1.begin(9600);
   Keyboard.begin();
-  while(!Serial);
 
   // Initialize pins
   initializeRowPins();
@@ -154,6 +154,7 @@ bool completeWord() {
   completionRequested = true;
   bool completionResult = makeRequest(curWord, completedWords, 200);
   if (completionResult) {
+    Serial.println(completedWords);
     Serial1.write(completedWords);
     Serial1.write('\0'); // TODO: necessary?
     return true;
@@ -193,7 +194,7 @@ void loop() {
 
   // If it's been a second since the last keypress,
   // request completions from GPT-3
-  if (!completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
+  if (curWordLen > 0 && !completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
     Serial.println("doing completion");
     setLedColor(0, 0, 0);
     lastKeypressMillis = millis();

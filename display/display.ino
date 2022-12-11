@@ -3,25 +3,25 @@
 const int rs = 0, en = 1, d4 = 2, d5 = 3, d6 = 4, d7 = 5;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
-#define bufcap 256
-char buf[bufcap];
-int buflen;
+String words;
 int cursor;
-int writepos;
 
 #define ncols 16
 #define nrows 2
 
-#define leftButton 8
+#define prevButton 8
 #define acceptButton 7
-#define rightButton 6
+#define nextButton 6
+
+#define COMPLETION_SEP ' '
+#define END_OF_COMPLETIONS '\0'
 
 void onPrev() {
     Serial.println("prev");
     if (cursor > 0) {
         do {
             cursor--;
-        } while (cursor > 0 && buf[cursor-1] != '\0');
+        } while (cursor > 0 && words.charAt(cursor-1) != COMPLETION_SEP);
     }
     display();
 }
@@ -29,10 +29,10 @@ void onPrev() {
 void onNext() {
     Serial.println("next");
     do {
-        Serial.println(buf[cursor]);
+        Serial.println(words.charAt(cursor));
         cursor++;
-    } while (buf[cursor-1] != '\0');
-    if (cursor >= buflen) {
+    } while (words.charAt(cursor-1) != COMPLETION_SEP);
+    if (cursor >= words.length()) {
         cursor = 0;
     }
     display();
@@ -40,71 +40,53 @@ void onNext() {
 
 void onAccept() {
     Serial.println("accept");
-    if (buflen > 0) {
-        acceptCandidate(&buf[cursor]);
+    if (words.length() > 0) {
+        Serial.println(words.substring(cursor));
+        Serial1.print(words.substring(cursor));
+        Serial1.write(END_OF_COMPLETIONS); // TODO: necessary?
     }
-}
-
-void acceptCandidate(char *candidate) {
-    Serial1.print(candidate);
-    Serial1.write('\0'); // TODO: necessary?
 }
 
 void setup() {
     Serial.begin(9600);
     while (!Serial);
     Serial1.begin(9600);
-    memset(buf, 0, bufcap);
-    memcpy(buf, "food11\0food22\0food33\0", 21);
-    buflen = 21;
     cursor = 0;
-    writepos = 0;
     lcd.begin(ncols, nrows);
 
-    attachInterrupt(digitalPinToInterrupt(leftButton), onPrev, RISING);
+    attachInterrupt(digitalPinToInterrupt(prevButton), onPrev, RISING);
     attachInterrupt(digitalPinToInterrupt(acceptButton), onAccept, RISING);
-    attachInterrupt(digitalPinToInterrupt(rightButton), onNext, RISING);
+    attachInterrupt(digitalPinToInterrupt(nextButton), onNext, RISING);
 }
 
 void display() {
     lcd.clear();
     
     lcd.setCursor(0, 0);
-    for (int i = 0; i < min(ncols, buflen-cursor); i++) {
-        if (buf[cursor+i] == '\0') {
+    for (int i = 0; i < min(ncols, words.length()-cursor); i++) {
+        if (words.charAt(cursor+i) == COMPLETION_SEP) {
             lcd.print('|');
         } else {
-            lcd.print(buf[cursor+i]);
+            lcd.print(words.charAt(cursor+i));
         }
     }
 
     lcd.setCursor(0, 1);
     int i = 0;
-    while (buf[cursor+i] != '\0') {
+    while (words.charAt(cursor+i) != COMPLETION_SEP) {
         lcd.print('_');
         i++;
     }
     while (i < ncols) {
-        lcd.print(' ');
+        lcd.print(COMPLETION_SEP);
         i++;
     }
 }
 
 void loop() {
     if (Serial1.available() > 0) {
-        static byte incoming;
-        incoming = Serial1.read();
-        Serial.println((char) incoming); // Debugging
-        if (incoming == '\n') {
-            buflen = 0;
-            cursor = 0;
-            writepos = 0;
-        } else if (writepos < bufcap) {
-            buf[writepos++] = incoming;
-            if (incoming == '\0') {
-                buflen = writepos;
-                display();
-            }
-        }
+        words = Serial1.readStringUntil(END_OF_COMPLETIONS);
+        cursor = 0;
+        display();
     }
 }
