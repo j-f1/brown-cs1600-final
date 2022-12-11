@@ -18,9 +18,9 @@ void setup_wifi() {
   Serial.println("Connected to WiFi!");
 }
 
-bool make_request(const char *word, char *result, size_t result_len) {
+bool makeRequest(const char *word, char *result, size_t result_len) {
   Serial.println("Sending request");
-  if (client.connectSSL(host, 443)) {
+  if (client.connect(host, 80)) {
     client.println("PUT / HTTP/1.1");
     client.print("Host: ");
     client.println(host);

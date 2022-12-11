@@ -1,89 +1,192 @@
 #include <Keyboard.h>
 
 int rows[] = {1,2,3};
-#define nrows 3
+#define NROWS 3
 int cols[] = {4,5,6,7,8,9,0};
-#define ncols 7
+#define NCOLS 7
 
-char keymap[nrows][ncols] = {
+char keymap[NROWS][NCOLS] = {
   {'p', 'l', 'k', 'j', 'h', 'g', 'f'},
   {'t', 'r', 'd', 's', 'w', 'q', 'a'},
   {'m', 'n', 'b', 'v', 'c', 'x', 'z'},
 };
 
+// GPT completion setup
 const int completionDelayMillis = 100;
 int lastKeypressMillis;
-bool completionRequested;
 
-#define bufcap 256
-char buf[bufcap];
-int bufStart;
-int bufLen;
-int bufLenProcessed;
+// Buffer setup
+#define BUFSIZE 256
+char buf[BUFSIZE];
+int curWordStart = 0;
+int curWordLen = 0;
+int curWordProcessedLen = 0;
 
-char gptResult[200];
-
-int rPin = A3; 
+// LED setup
+int rPin = A3;
 int gPin = 11;
 int bPin = A4;
-int pwmVal = 5;
+int pwmVal = 0;
 int dir = 1;
 
-void setup() {
-  Serial.begin(9600);
-  Keyboard.begin();
+/**
+ * Sets the led to the provided (r, g, b) value.
+ */
+void setLedColor(int r, int g, int b) {
+  analogWrite(rPin, r);
+  analogWrite(gPin, g);
+  analogWrite(bPin, b);
+}
 
-  for (int i = 0; i < nrows; i++) {
-    pinMode(rows[i], OUTPUT);
-    digitalWrite(rows[i], HIGH);
-  }
-  for (int i = 0; i < ncols; i++) {
-    pinMode(cols[i], INPUT);
-    attachInterrupt(digitalPinToInterrupt(cols[i]), onKeypress, RISING);
-  }
+
+/**
+ * Indicate idle state with a pulsing green light on the LED.
+ */
+void ledIndicateIdle() {
+  setLedColor(0, pwmVal, 0);
   
-  setup_wifi();
-  setupWDT();
-  lastKeypressMillis = millis();
-  completionRequested = true;
-  memset(buf, 0, bufcap);
+  pwmVal = constrain(pwmVal + 10 * dir, 0, 255);
+  if (pwmVal >= 255 || pwmVal <= 0) {
+    dir = -dir;
+  }
+}
+
+/**
+ * Turns all of the row pins to the value [on], which should be either HIGH or LOW.
+ */
+void setAllRowOutputs(bool on) {
+  for (int r = 0; r < NROWS; r++) {
+    digitalWrite(rows[r], on);
+  }
+}
+
+/**
+ * Initializes each of the row pins as an output pin, and powers it by default.
+ */
+void initializeRowPins() {
+  for (int r = 0; r < NROWS; r++) {
+    pinMode(rows[r], OUTPUT);
+  }
+  setAllRowOutputs(HIGH);
+}
+
+/**
+ * Initializes each of the column pins as an input pin, and attaches the `onKeypress` ISR to run on a rising edge.
+ */
+void initializeColumnPins() {
+  // Set each column to be an input pin; attach `onKeypress` to rising edge.
+  for (int c = 0; c < NCOLS; c++) {
+    pinMode(cols[c], INPUT);
+    attachInterrupt(digitalPinToInterrupt(cols[c]), onKeypress, RISING);
+  }
+}
+
+/**
+ * Initializes each of the LED pins as output pins and turns off the LED by default.
+ */
+void initializeLedPins() {
+  // Initialize led pins as output pins and drive them low to start.
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
   pinMode(bPin, OUTPUT);
+  setLedColor(0, 0, 0);
 }
 
-void loop() {
-  // led indicator pulse green while idle/standing by for request
-  analogWrite(rPin, 0);
-  analogWrite(gPin, pwmVal);
-  analogWrite(bPin, 0);
-  pwmVal += 10 * dir;
-  if (pwmVal == 255 || pwmVal == 5) {
-    dir = -dir;
-  }
-  
-  // Send new keypresses to computer
+/**
+ * Main setup routine.
+ */
+void setup() {
+  // Initialize serial & keyboard
+  Serial.begin(9600);
+  Keyboard.begin();
+  while(!Serial);
+
+  // Initialize pins
+  initializeRowPins();
+  initializeColumnPins();
+  initializeLedPins();
+
+  lastKeypressMillis = millis();
+
+  setup_wifi();
+//  setupWDT();
+
+  // initialize the buffer
+  memset(buf, '\0', BUFSIZE);
+}
+
+/**
+ * Sends the new (unprocessed) keypresses to the computer to be typed.
+ */
+void sendNewKeypresses() {
   noInterrupts();
-  while (bufLenProcessed < bufLen) {
-    char c = buf[(bufStart + bufLenProcessed) % bufcap];
-    Keyboard.print(c);
-    completionRequested = false;
-    bufLenProcessed++;
+
+  for(; curWordProcessedLen < curWordLen; curWordProcessedLen++) {
+    char charToProcess = buf[curWordStart + curWordProcessedLen];
+    Keyboard.print(charToProcess);
   }
+
   interrupts();
+}
+
+/**
+ * Gets the current word from the buffer, null-terminates it and returns it.
+ */
+char *getCurWord() {
+  char curWord[BUFSIZE];
+  memset(curWord, '\0', BUFSIZE);
+  
+  for (int i = 0; i < curWordLen; i++) {
+    curWord[i] = buf[curWordStart + i];
+  }
+
+  return curWord;
+}
+
+/**
+ * Gets the vowel-less word, sends it to GPT-3 and returns the resulting word. Returns 
+ * true if successful, and false if the completion was not successful.
+ */
+bool completeWord() {
+  char *curWord = getCurWord();
+
+  // make the request to fill in the vowels
+  char completedWord[BUFSIZE];
+  completionResult = makeRequest(curWord, completedWord, 200);
+  if (!completionResult) {
+    Serial.println("Error: failed to make word completion");
+    return false;
+  }
+
+  // clear the un-voweled word and type in the completed word
+  for (int i = 0; i < curWordLen; i++) {
+    Keyboard.press(KEY_BACKSPACE);
+  }
+  Keyboard.print(completionResult);
+  Keyboard.print(' ');
+
+  // reset the current word variables
+  curWordStart += curWordLen;
+  curWordLen = 0;
+  curWordProcessedLen = 0;
+  return true;
+}
+
+
+/**
+ * Main loop routine.
+ */
+void loop() {
+  ledInidicateIdle();
+  sendNewKeypresses();
 
   // If it's been a second since the last keypress,
   // request completions from GPT-3
-  if (!completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
+  if (millis() - lastKeypressMillis > completionDelayMillis) {
     noInterrupts();
     static char word[bufcap];
-    
-    // Sending word to gpt3: led off + reset vals
-    analogWrite(rPin, 255);
-    analogWrite(gPin, 255);
-    analogWrite(bPin, 0);
-    pwmVal = 5;
-    dir = 1;
+
+    setLedColor(0, 0, 0);
 
     // Scan backwards to find the start of the last word
     int wordLen;
@@ -105,67 +208,99 @@ void loop() {
       if (make_request(word, gptResult, 200)) {
         Serial.println(gptResult);
         // Success led green
-        analogWrite(gPin, 255);
-        analogWrite(bPin, 0);
-        analogWrite(rPin, 0);
+        setLedColor(0, 255, 0);
       } else {
         Serial.println("failure");
-  
+
         // Error led red
-        analogWrite(rPin, 255);
-        analogWrite(bPin, 0);
-        analogWrite(gPin, 0);
+        setLedColor(255, 0, 0);
       }
       delay(10000);
     }
-    completionRequested = true;
     interrupts();
   }
 
-  // Pet the watchdog
-  WDT->CLEAR.reg = 0xA5;
+  petWatchdog();
 }
 
+/**
+ * Gets the index of the first active column when powering just [poweredRow]. If no column is
+ * active, returns -1.
+ */
+int getActiveColumn(int poweredRow) {
+  // power just the poweredRow
+  setAllRowOutputs(LOW);
+  digitalWrite(rows[poweredRow], HIGH);
+
+  for (int c = 0; c < NCOLS; c++) {
+    if (digitalRead(cols[c]) == HIGH) {
+      return c;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Returns true iff the buffer does not have space to store another letter.
+ */
+bool isBufferFull() {
+  return (bufStart + bufLen) > BUFSIZE;
+}
+
+/**
+ * Attempts to resize the buffer by dropping all previous words and moving the current
+ * word to the beginning of the buffer.
+ */
+void resizeBuffer() {
+  // TODO:
+}
+
+/**
+ * ISR for handling keypresses. Run when a rising edge on a column is detected.
+ * Subsequently, it cycles through powering each row individually to detect which row
+ * the keypress occured in. Adds the resulting letter to the buffer.
+ */
 void onKeypress() {
   noInterrupts();
-  for (int row = 0; row < nrows; row++) {
-    digitalWrite(rows[row], LOW);
-  }
-  int activeRow = -1;
+
+  // find the exact key that was pressed by powering each row individually and checking for a column press
   int activeCol = -1;
-  bool err = false;
-  for (int row = 0; row < nrows; row++) {
-    digitalWrite(rows[row], HIGH);
-    for (int col = 0; col < ncols; col++) {
-      if (digitalRead(cols[col]) == HIGH) {
-        if (activeRow == -1 && activeCol == -1) {
-          activeRow = row;
-          activeCol = col;
-        } else {
-          err = true;
-        }
-      }
+  int activeRow = -1;
+  for (int r = 0; r < NROWS; r++) {
+    activeCol = getActiveColumn(r);
+    if (activeCol != -1) {
+      activeRow = r;
+      break;
     }
-    digitalWrite(rows[row], LOW);
   }
-  if (activeRow != -1 && activeCol != -1 && !err) {
-    if (bufLen < bufcap && millis() - lastKeypressMillis > 5) {
-      Serial.print("Detected key press at ");
-      Serial.println(millis());
-      buf[(bufStart + bufLen) % bufcap] = keymap[activeRow][activeCol];
-      bufLen++;
-      lastKeypressMillis = millis();
-      completionRequested = false;
-    } // TODO: how to handle full buffer
+
+  // Process key and add it to the buffer
+  // check that we were able to detect the key
+  if (activeCol != -1 && activeRow != -1) {
+    char letter = keymap[activeRow][activeCol];
+
+    // check that it's not the same key being held continuously
+    if (millis() - lastKeypressMillis > 5 || letter != ...) {
+      // if buffer is full, resize it first
+      if (isBufferFull()) { resizeBuffer(); }
+
+      buf[curWordStart + curWordLen] = letter;
+      curWordLen++;
+    }
   }
-  for (int row = 0; row < nrows; row++) {
-    digitalWrite(rows[row], HIGH);
+  else {
+    Serial.println("Unable to detect which key was pressed.");
   }
+
+  // Reset to the default state.
+  setAllRowOutputs(HIGH);
+  lastKeypressMillis = millis();
   interrupts();
 }
 
-// Set up a 4s watchdog timer
-// Adapter from lab4
+/**
+ * Sets up a 4 second watchdog timer. Adapted from lab 4.
+ */
 void setupWDT() {
   // Clear and enable WDT
   NVIC_DisableIRQ(WDT_IRQn);
@@ -197,8 +332,12 @@ void WDT_Handler() {
   // Clear interrupt register flag
   // (reference register with WDT->register_name.reg)
   WDT->INTFLAG.bit.EW = 1;
-  
+
   // Warn user that a watchdog reset may happen
   // TODO: light up status LED red
   Serial.println("Warning: watchdog reset imminent!");
+}
+
+void petWatchdog() {
+  WDT->CLEAR.reg = 0xA5;
 }
