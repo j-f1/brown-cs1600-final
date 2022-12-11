@@ -12,13 +12,9 @@ const pricing = {
   "text-ada-001": 0.0004,
   "text-babbage-001": 0.0005,
   "text-curie-001": 0.002,
-  "text-davinci-002": 0.02,
+  "text-davinci-003": 0.02,
 };
-let accumulatedCost = 0;
-
-try {
-  parseFloat(fs.readFileSync("cost.txt", "utf-8"));
-} catch {}
+let accumulatedCost = parseFloat(fs.readFileSync("cost.txt", "utf-8"));
 
 const fastify = require("fastify")({
   logger: false,
@@ -26,8 +22,10 @@ const fastify = require("fastify")({
 
 fastify.put("/", async function (request, reply) {
   const input = request.body;
+  console.log('got message!', input)
   const token = request.headers["auth-token"];
   if (token !== process.env.AUTH_TOKEN) return reply.send("invalid token!");
+  if (!input) return reply.send("empty input!");
   if (!/^[a-z]+$/.test(input)) return reply.send("invalid input!");
 
   const completion = await openai.createCompletion({
@@ -53,6 +51,10 @@ Output: [`,
 
   return reply.send(completion.data.choices[0].text);
 });
+
+fastify.get("/models", async function (request, reply) {
+  return reply.send((await openai.listModels()).data);
+})
 
 fastify.get("/cost", function (request, reply) {
   return reply.send(`$${accumulatedCost.toFixed(4)}`);
