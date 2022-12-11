@@ -20,20 +20,37 @@ void setup_wifi() {
 
 // Requests completions from GPT-3, writing a space-separated list of words
 // into `result` on success.
-bool makeRequest(const char *word, char *result, size_t result_len) {
-  Serial.println("Sending request");
+bool makeRequest(char *consonantWord, char *result, size_t result_len) {
+  Serial.println(consonantWord);
+  
+  Serial.print("Sending request to: ");
+  Serial.println(host);
+  Serial.print(strlen(consonantWord));
   if (client.connect(host, 80)) {
+    Serial.print("0 ");
     client.println("PUT / HTTP/1.1");
+    Serial.print("1 ");
     client.print("Host: ");
+    Serial.print("2 ");
     client.println(host);
+    Serial.print("3 ");
     client.println("Content-Type: text/plain; charset=utf-8");
+    Serial.print("4 ");
     client.print("Auth-Token: ");
+    Serial.print("5 ");
     client.println(api_key);
+    Serial.print("6 ");
     client.println("Connection: close");
+    Serial.print("7 ");
     client.print("Content-Length: ");
-    client.println(strlen(word));
+    Serial.print("8 ");
+    client.println(strlen(consonantWord));
+    Serial.print("9 ");
     client.println();
-    client.println(word);
+    Serial.print("10 ");
+    client.println(consonantWord);
+    Serial.print("11 ");
+    
     Serial.println("Sent request");
   } else {
     Serial.println("Failed to fetch webpage");

@@ -12,7 +12,7 @@ char keymap[NROWS][NCOLS] = {
 };
 
 // GPT completion setup
-const int completionDelayMillis = 100;
+const int completionDelayMillis = 5000;
 int lastKeypressMillis;
 
 // Buffer setup
@@ -45,7 +45,7 @@ void setLedColor(int r, int g, int b) {
 void ledIndicateIdle() {
   setLedColor(0, pwmVal, 0);
   
-  pwmVal = constrain(pwmVal + 10 * dir, 0, 255);
+  pwmVal = constrain(pwmVal + 1 * dir, 0, 255);
   if (pwmVal >= 255 || pwmVal <= 0) {
     dir = -dir;
   }
@@ -132,15 +132,12 @@ void sendNewKeypresses() {
 /**
  * Gets the current word from the buffer, null-terminates it and returns it.
  */
-char *getCurWord() {
-  char curWord[BUFSIZE];
-  memset(curWord, '\0', BUFSIZE);
+void getCurWord(char *out) {
+  memset(out, '\0', BUFSIZE);
   
   for (int i = 0; i < curWordLen; i++) {
-    curWord[i] = buf[curWordStart + i];
+    out[i] = buf[curWordStart + i];
   }
-
-  return curWord;
 }
 
 /**
@@ -148,7 +145,8 @@ char *getCurWord() {
  * true if successful, and false if the completion was not successful.
  */
 bool completeWord() {
-  char *curWord = getCurWord();
+  char curWord[BUFSIZE];
+  getCurWord(curWord);
 
   // make the request to fill in the vowels
   char completedWord[BUFSIZE];
@@ -177,26 +175,28 @@ bool completeWord() {
  * Main loop routine.
  */
 void loop() {
-  ledIndicateIdle();
+//  ledIndicateIdle();
   sendNewKeypresses();
 
-  // If it's been a second since the last keypress,
+  // if it's been a second since the last keypress,
   // request completions from GPT-3
   if (millis() - lastKeypressMillis > completionDelayMillis) {
+    Serial.println("doing completion");
     noInterrupts();
     setLedColor(0, 0, 0);
+    lastKeypressMillis = millis();
 
     bool isCompletionSuccessful = completeWord();
     if (isCompletionSuccessful) {
       setLedColor(0, 255, 0);
     } else {
-      setLedColor(255, 0, 255);
+      setLedColor(255, 0, 0);
     }
     
     interrupts();
   }
 
-  petWatchdog();
+//  petWatchdog();
 }
 
 /**
@@ -229,6 +229,7 @@ bool isBufferFull() {
  */
 void resizeBuffer() {
   // TODO:
+  Serial.println("UH OH");
 }
 
 /**
@@ -254,6 +255,7 @@ void onKeypress() {
   // check that we were able to detect the key
   if (activeCol != -1 && activeRow != -1) {
     char letter = keymap[activeRow][activeCol];
+    Serial.println(letter);
 
     // get the previous letter
     char prevLetter = '\0';
