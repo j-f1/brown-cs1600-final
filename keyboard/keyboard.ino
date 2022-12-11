@@ -220,7 +220,7 @@ int getActiveColumn(int poweredRow) {
  * Returns true iff the buffer does not have space to store another letter.
  */
 bool isBufferFull() {
-  return (bufStart + bufLen) > BUFSIZE;
+  return (curWordStart + curWordLen) > BUFSIZE;
 }
 
 /**
@@ -255,8 +255,14 @@ void onKeypress() {
   if (activeCol != -1 && activeRow != -1) {
     char letter = keymap[activeRow][activeCol];
 
+    // get the previous letter
+    char prevLetter = '\0';
+    if (curWordLen > 0) {
+      prevLetter = buf[curWordStart + curWordLen - 1];
+    }
+
     // check that it's not the same key being held continuously
-    if (millis() - lastKeypressMillis > 5 || letter != ...) {
+    if (millis() - lastKeypressMillis > 5 || letter != prevLetter) {
       // if buffer is full, resize it first
       if (isBufferFull()) { resizeBuffer(); }
 
