@@ -14,13 +14,12 @@ char keymap[NROWS][NCOLS] = {
 // GPT completion setup
 const int completionDelayMillis = 5000;
 int lastKeypressMillis;
+bool completionRequested;
 
 // Buffer setup
 #define BUFSIZE 256
-char buf[BUFSIZE];
-int curWordStart = 0;
-int curWordLen = 0;
-int curWordProcessedLen = 0;
+char curWord[BUFSIZE];
+int curWordLen;
 
 // LED setup
 int rPin = A3;
@@ -37,7 +36,6 @@ void setLedColor(int r, int g, int b) {
   analogWrite(gPin, g);
   analogWrite(bPin, b);
 }
-
 
 /**
  * Indicate idle state with a pulsing green light on the LED.
@@ -109,80 +107,94 @@ void setup() {
   lastKeypressMillis = millis();
 
   setup_wifi();
-//  setupWDT();
+  setupWDT();
 
-  // initialize the buffer
-  memset(buf, '\0', BUFSIZE);
+  // Fill the current word buffer with nul-terminators
+  memset(curWord, '\0', BUFSIZE);
+  curWordLen = 0;
+  completionRequested = false;
 }
 
-/**
- * Sends the new (unprocessed) keypresses to the computer to be typed.
- */
-void sendNewKeypresses() {
-  noInterrupts();
-
-  for(; curWordProcessedLen < curWordLen; curWordProcessedLen++) {
-    char charToProcess = buf[curWordStart + curWordProcessedLen];
-    Keyboard.print(charToProcess);
+// Processes a keypress, sending it to the attached device.
+// If the keypress is a backspace, deletes a character from the buffer;
+// otherwise, adds the character to the buffer.
+// Must be called with interrupts disabled.
+// Returns true on success.
+bool processKeypress(char c) {
+  completionRequested = false;
+  if (c == KEY_BACKSPACE) {
+    if (curWordLen == 0) {
+      return false;
+    } else {
+      Keyboard.print(c);
+      curWordLen--;
+      curWord[curWordLen] = '\0';
+      return true;
+    }
+  } else {
+    if (isBufferFull()) {
+      return false;
+    } else {
+      Keyboard.print(c);
+      curWord[curWordLen] = c;
+      curWordLen++;
+      return true;
+    }
   }
-
-  interrupts();
 }
 
 /**
- * Gets the current word from the buffer, null-terminates it and returns it.
- */
-void getCurWord(char *out) {
-  memset(out, '\0', BUFSIZE);
-  
-  for (int i = 0; i < curWordLen; i++) {
-    out[i] = buf[curWordStart + i];
-  }
-}
-
-/**
- * Gets the vowel-less word, sends it to GPT-3 and returns the resulting word. Returns 
- * true if successful, and false if the completion was not successful.
+ * Sends the vowel-less word to GPT-3, and sends the results to the completion
+ * display. Returns false if an error occurred.
  */
 bool completeWord() {
-  char curWord[BUFSIZE];
-  getCurWord(curWord);
+  static char completedWords[BUFSIZE];
 
-  // make the request to fill in the vowels
-  char completedWord[BUFSIZE];
-  bool completionResult = makeRequest(curWord, completedWord, 200);
-  if (!completionResult) {
-    Serial.println("Error: failed to make word completion");
+  // Make the request to fill in the vowels
+  completionRequested = true;
+  bool completionResult = makeRequest(curWord, completedWords, 200);
+  if (completionResult) {
+    Serial1.write(completedWords);
+    Serial1.write('\0'); // TODO: necessary?
+    return true;
+  } else {
+    Serial.println("Error: failed to make word completions");
     return false;
   }
-
-  // clear the un-voweled word and type in the completed word
-  for (int i = 0; i < curWordLen; i++) {
-    Keyboard.press(KEY_BACKSPACE);
-  }
-  Keyboard.print(completionResult);
-  Keyboard.print(' ');
-
-  // reset the current word variables
-  curWordStart += curWordLen;
-  curWordLen = 0;
-  curWordProcessedLen = 0;
-  return true;
 }
 
+bool acceptCompletion() {
+  if (Serial1.available() == 0) {
+    return false;
+  } else {
+    noInterrupts();
+
+    String word = Serial1.readStringUntil('\0');
+
+    // Clear the un-voweled word and type in the completed word
+    for (int i = 0; i < curWordLen; i++) {
+      processKeypress(KEY_BACKSPACE);
+    }
+    for (int i = 0; i < word.length(); i++) {
+      processKeypress(word.charAt(i));
+    }
+    processKeypress(' ');
+
+    interrupts();
+    return true;
+  }
+}
 
 /**
  * Main loop routine.
  */
 void loop() {
-//  ledIndicateIdle();
-  sendNewKeypresses();
+  ledIndicateIdle();
 
-  // if it's been a second since the last keypress,
+  // If it's been a second since the last keypress,
   // request completions from GPT-3
-  if (millis() - lastKeypressMillis > completionDelayMillis) {
+  if (!completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
     Serial.println("doing completion");
-    // noInterrupts();
     setLedColor(0, 0, 0);
     lastKeypressMillis = millis();
 
@@ -192,11 +204,9 @@ void loop() {
     } else {
       setLedColor(255, 0, 0);
     }
-    
-    // interrupts();
   }
 
-//  petWatchdog();
+  petWatchdog();
 }
 
 /**
@@ -220,16 +230,7 @@ int getActiveColumn(int poweredRow) {
  * Returns true iff the buffer does not have space to store another letter.
  */
 bool isBufferFull() {
-  return (curWordStart + curWordLen) > BUFSIZE;
-}
-
-/**
- * Attempts to resize the buffer by dropping all previous words and moving the current
- * word to the beginning of the buffer.
- */
-void resizeBuffer() {
-  // TODO:
-  Serial.println("UH OH");
+  return curWordLen >= BUFSIZE;
 }
 
 /**
@@ -260,16 +261,12 @@ void onKeypress() {
     // get the previous letter
     char prevLetter = '\0';
     if (curWordLen > 0) {
-      prevLetter = buf[curWordStart + curWordLen - 1];
+      prevLetter = curWord[curWordLen - 1];
     }
 
     // check that it's not the same key being held continuously
     if (millis() - lastKeypressMillis > 5 || letter != prevLetter) {
-      // if buffer is full, resize it first
-      if (isBufferFull()) { resizeBuffer(); }
-
-      buf[curWordStart + curWordLen] = letter;
-      curWordLen++;
+      processKeypress(letter);
     }
   }
   else {

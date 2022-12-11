@@ -16,8 +16,8 @@ int writepos;
 #define acceptButton 7
 #define rightButton 6
 
-void onLeft() {
-    Serial.println("left");
+void onPrev() {
+    Serial.println("prev");
     if (cursor > 0) {
         do {
             cursor--;
@@ -26,8 +26,8 @@ void onLeft() {
     display();
 }
 
-void onRight() {
-    Serial.println("right");
+void onNext() {
+    Serial.println("next");
     do {
         Serial.println(buf[cursor]);
         cursor++;
@@ -40,11 +40,14 @@ void onRight() {
 
 void onAccept() {
     Serial.println("accept");
-    acceptCandidate(&buf[cursor]);
+    if (buflen > 0) {
+        acceptCandidate(&buf[cursor]);
+    }
 }
 
 void acceptCandidate(char *candidate) {
-  
+    Serial1.print(candidate);
+    Serial1.write('\0'); // TODO: necessary?
 }
 
 void setup() {
@@ -58,9 +61,9 @@ void setup() {
     writepos = 0;
     lcd.begin(ncols, nrows);
 
-    attachInterrupt(digitalPinToInterrupt(leftButton), onLeft, RISING);
+    attachInterrupt(digitalPinToInterrupt(leftButton), onPrev, RISING);
     attachInterrupt(digitalPinToInterrupt(acceptButton), onAccept, RISING);
-    attachInterrupt(digitalPinToInterrupt(rightButton), onRight, RISING);
+    attachInterrupt(digitalPinToInterrupt(rightButton), onNext, RISING);
 }
 
 void display() {
