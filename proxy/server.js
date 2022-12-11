@@ -32,14 +32,14 @@ fastify.put("/", async function (request, reply) {
     model,
     prompt: `Output up to ten valid, complete English corrections for words which are missing their vowels. Only add the letters A, E, I, O, or Y. Do not add any additional consonants or other characters in the corrections.
 Input: frnd
-Output: [ friend, frond ]
+Output: [ friend frond ]
 Input: mmr
-Output: [ immure, memoir, memory, yammer, yummier ]
+Output: [ immure memoir memory yammer yummier ]
 Input: fld
-Output: [ afield, failed, field, filed, flayed, fled, flood, fluid, foaled, fold ]
+Output: [ afield failed field filed flayed fled flood fluid foaled fold ]
 Input: ${input}
 Output: [`,
-    stop: [']'],
+    stop: [' ]'],
   });
 
   const cost = (pricing[model] * completion.data.usage.total_tokens) / 1000;
