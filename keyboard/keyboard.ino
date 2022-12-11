@@ -121,6 +121,7 @@ void setup() {
 // Must be called with interrupts disabled.
 // Returns true on success.
 bool processKeypress(char c) {
+  delay(10);
   completionRequested = false;
   if (c == KEY_BACKSPACE) {
     if (curWordLen == 0) {
@@ -168,9 +169,10 @@ bool acceptCompletion() {
   if (Serial1.available() == 0) {
     return false;
   } else {
-    noInterrupts();
-
     String word = Serial1.readStringUntil('\0');
+
+    Serial.print("received completion: ");
+    Serial.println(word);
 
     // Clear the un-voweled word and type in the completed word
     for (int i = 0; i < curWordLen; i++) {
@@ -180,8 +182,8 @@ bool acceptCompletion() {
       processKeypress(word.charAt(i));
     }
     processKeypress(' ');
+    completionRequested = true;
 
-    interrupts();
     return true;
   }
 }
@@ -206,6 +208,8 @@ void loop() {
       setLedColor(255, 0, 0);
     }
   }
+
+  acceptCompletion();
 
   petWatchdog();
 }

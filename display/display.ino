@@ -41,8 +41,14 @@ void onNext() {
 void onAccept() {
     Serial.println("accept");
     if (words.length() > 0) {
-        Serial.println(words.substring(cursor));
-        Serial1.print(words.substring(cursor));
+        int endCursor = cursor;
+        while (endCursor < words.length() && words.charAt(endCursor) != COMPLETION_SEP) {
+            endCursor++;
+        }
+        String word = words.substring(cursor, endCursor);
+        Serial.print("Accepted suggestion: ");
+        Serial.println(word);
+        Serial1.print(word);
         Serial1.write(END_OF_COMPLETIONS); // TODO: necessary?
     }
 }
@@ -86,6 +92,7 @@ void display() {
 void loop() {
     if (Serial1.available() > 0) {
         words = Serial1.readStringUntil(END_OF_COMPLETIONS);
+        Serial.println(words);
         cursor = 0;
         display();
     }
