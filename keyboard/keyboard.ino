@@ -182,7 +182,7 @@ void loop() {
   // request completions from GPT-3
   if (millis() - lastKeypressMillis > completionDelayMillis) {
     Serial.println("doing completion");
-    noInterrupts();
+    // noInterrupts();
     setLedColor(0, 0, 0);
     lastKeypressMillis = millis();
 
@@ -193,7 +193,7 @@ void loop() {
       setLedColor(255, 0, 0);
     }
     
-    interrupts();
+    // interrupts();
   }
 
 //  petWatchdog();
@@ -273,7 +273,7 @@ void onKeypress() {
     }
   }
   else {
-    Serial.println("Unable to detect which key was pressed.");
+     // Serial.println("Unable to detect which key was pressed.");
   }
 
   // Reset to the default state.
