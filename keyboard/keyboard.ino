@@ -23,9 +23,8 @@ int curWordLen;
 bool spaceAppended;
 
 // LED setup
-int rPin = 11;
-int gPin = A3;
-int bPin = A4;
+int rPin = A3;
+int gPin = A4;
 int pwmVal = 0;
 int dir = 1;
 
@@ -35,7 +34,6 @@ int dir = 1;
 void setLedColor(int r, int g, int b) {
   analogWrite(rPin, r);
   analogWrite(gPin, g);
-  analogWrite(bPin, b);
 }
 
 /**
@@ -87,7 +85,6 @@ void initializeLedPins() {
   // Initialize led pins as output pins and drive them low to start.
   pinMode(rPin, OUTPUT);
   pinMode(gPin, OUTPUT);
-  pinMode(bPin, OUTPUT);
   setLedColor(0, 0, 0);
 }
 
@@ -232,7 +229,7 @@ void loop() {
     } else {
       setLedColor(255, 0, 0);
     }
-    delay(100);
+    delay(1000);
   }
 
   acceptCompletion();
