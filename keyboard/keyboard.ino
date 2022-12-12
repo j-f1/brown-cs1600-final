@@ -23,8 +23,8 @@ int curWordLen;
 bool spaceAppended;
 
 // LED setup
-int rPin = A3;
-int gPin = 11;
+int rPin = 11;
+int gPin = A3;
 int bPin = A4;
 int pwmVal = 0;
 int dir = 1;
@@ -124,7 +124,6 @@ void setup() {
 // Returns true on success.
 bool processKeypress(char c) {
   delay(10);
-  completionRequested = false;
   if (c == KEY_BACKSPACE) {
     if (spaceAppended) {
       Keyboard.print(c);
@@ -199,7 +198,7 @@ bool acceptCompletion() {
       }
     }
 
-    Serial.print("received completion: ");
+    Serial.print("Received completion: ");
     Serial.println(word);
 
     // Clear the un-voweled word and type in the completed word
@@ -210,7 +209,6 @@ bool acceptCompletion() {
       processKeypress(word[i]);
     }
     processKeypress(' ');
-    completionRequested = true;
 
     return true;
   }
@@ -225,8 +223,7 @@ void loop() {
   // If it's been a second since the last keypress,
   // request completions from GPT-3
   if (curWordLen > 0 && !completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
-    Serial.println("doing completion");
-    setLedColor(0, 0, 0);
+    setLedColor(255, 255, 0);
     lastKeypressMillis = millis();
 
     bool isCompletionSuccessful = completeWord();
@@ -235,6 +232,7 @@ void loop() {
     } else {
       setLedColor(255, 0, 0);
     }
+    delay(100);
   }
 
   acceptCompletion();
@@ -300,6 +298,7 @@ void onKeypress() {
     // check that it's not the same key being held continuously
     if (millis() - lastKeypressMillis > 5 || letter != prevLetter) {
       processKeypress(letter);
+      completionRequested = false;
     }
   }
   else {
