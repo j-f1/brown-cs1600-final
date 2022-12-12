@@ -21,7 +21,7 @@ void onPrev() {
     if (cursor > 0) {
         do {
             cursor--;
-        } while (cursor > 0 && words.charAt(cursor-1) != COMPLETION_SEP);
+        } while (cursor > 0 && words[cursor-1] != COMPLETION_SEP);
     }
     display();
 }
@@ -29,9 +29,8 @@ void onPrev() {
 void onNext() {
     Serial.println("next");
     do {
-        Serial.println(words.charAt(cursor));
         cursor++;
-    } while (words.charAt(cursor-1) != COMPLETION_SEP);
+    } while (cursor < words.length() && words[cursor-1] != COMPLETION_SEP);
     if (cursor >= words.length()) {
         cursor = 0;
     }
@@ -69,16 +68,16 @@ void display() {
     
     lcd.setCursor(0, 0);
     for (int i = 0; i < min(ncols, words.length()-cursor); i++) {
-        if (words.charAt(cursor+i) == COMPLETION_SEP) {
+        if (words[cursor+i] == COMPLETION_SEP) {
             lcd.print('|');
         } else {
-            lcd.print(words.charAt(cursor+i));
+            lcd.print(words[cursor+i]);
         }
     }
 
     lcd.setCursor(0, 1);
     int i = 0;
-    while (words.charAt(cursor+i) != COMPLETION_SEP) {
+    while (cursor+i < words.length() && words[cursor+i] != COMPLETION_SEP) {
         lcd.print('_');
         i++;
     }

@@ -20,6 +20,7 @@ bool completionRequested;
 #define BUFSIZE 256
 char curWord[BUFSIZE];
 int curWordLen;
+bool spaceAppended;
 
 // LED setup
 int rPin = A3;
@@ -112,6 +113,7 @@ void setup() {
   // Fill the current word buffer with nul-terminators
   memset(curWord, '\0', BUFSIZE);
   curWordLen = 0;
+  spaceAppended = false;
   completionRequested = false;
 }
 
@@ -124,7 +126,11 @@ bool processKeypress(char c) {
   delay(10);
   completionRequested = false;
   if (c == KEY_BACKSPACE) {
-    if (curWordLen == 0) {
+    if (spaceAppended) {
+      Keyboard.print(c);
+      spaceAppended = false;
+      return true;
+    } else if (curWordLen == 0) {
       return false;
     } else {
       Keyboard.print(c);
@@ -133,10 +139,19 @@ bool processKeypress(char c) {
       return true;
     }
   } else {
-    if (isBufferFull()) {
+    if (c == ' ' && !spaceAppended) {
+      Keyboard.print(c);
+      spaceAppended = true;
+      return true;
+    } else if (isBufferFull()) {
       return false;
     } else {
       Keyboard.print(c);
+      if (spaceAppended) {
+        spaceAppended = false;
+        memset(curWord, 0, curWordLen);
+        curWordLen = 0;
+      }
       curWord[curWordLen] = c;
       curWordLen++;
       return true;
@@ -173,17 +188,22 @@ bool acceptCompletion() {
     memset(word, '\0', BUFSIZE);
     int wordLen = 0;
     char incoming;
-    do {
+    while (wordLen < BUFSIZE) {
       while (Serial1.available() == 0) {}
       incoming = Serial1.read();
-      word[wordLen++] = incoming;
-    } while (incoming != '\0' && wordLen < BUFSIZE);
+      word[wordLen] = incoming;
+      if (incoming == '\0') {
+        break;
+      } else {
+        wordLen++;
+      }
+    }
 
     Serial.print("received completion: ");
     Serial.println(word);
 
     // Clear the un-voweled word and type in the completed word
-    for (int i = 0; i < curWordLen; i++) {
+    while (curWordLen > 0) {
       processKeypress(KEY_BACKSPACE);
     }
     for (int i = 0; i < wordLen; i++) {
