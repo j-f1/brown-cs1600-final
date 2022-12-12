@@ -9,9 +9,9 @@ int cursor;
 #define ncols 16
 #define nrows 2
 
-#define prevButton 8
-#define acceptButton 7
-#define nextButton 6
+#define prevButton 7
+#define acceptButton 8
+#define nextButton 7
 
 #define COMPLETION_SEP ' '
 #define END_OF_COMPLETIONS '\0'
