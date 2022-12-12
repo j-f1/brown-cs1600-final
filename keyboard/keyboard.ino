@@ -96,7 +96,7 @@ void initializeLedPins() {
 void setup() {
   // Initialize serial & keyboard
   Serial.begin(9600);
-  Serial1.begin(9600);
+  Serial1.begin(300);
   Keyboard.begin();
 
   // Initialize pins
@@ -157,7 +157,7 @@ bool completeWord() {
   if (completionResult) {
     Serial.println(completedWords);
     Serial1.write(completedWords);
-    Serial1.write('\0'); // TODO: necessary?
+    Serial1.write('\0');
     return true;
   } else {
     Serial.println("Error: failed to make word completions");
@@ -169,7 +169,15 @@ bool acceptCompletion() {
   if (Serial1.available() == 0) {
     return false;
   } else {
-    String word = Serial1.readStringUntil('\0');
+    static char word[BUFSIZE];
+    memset(word, '\0', BUFSIZE);
+    int wordLen = 0;
+    char incoming;
+    do {
+      while (Serial1.available() == 0) {}
+      incoming = Serial1.read();
+      word[wordLen++] = incoming;
+    } while (incoming != '\0' && wordLen < BUFSIZE);
 
     Serial.print("received completion: ");
     Serial.println(word);
@@ -178,8 +186,8 @@ bool acceptCompletion() {
     for (int i = 0; i < curWordLen; i++) {
       processKeypress(KEY_BACKSPACE);
     }
-    for (int i = 0; i < word.length(); i++) {
-      processKeypress(word.charAt(i));
+    for (int i = 0; i < wordLen; i++) {
+      processKeypress(word[i]);
     }
     processKeypress(' ');
     completionRequested = true;

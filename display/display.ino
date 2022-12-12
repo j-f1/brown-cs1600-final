@@ -49,14 +49,13 @@ void onAccept() {
         Serial.print("Accepted suggestion: ");
         Serial.println(word);
         Serial1.print(word);
-        Serial1.write(END_OF_COMPLETIONS); // TODO: necessary?
+        Serial1.write(END_OF_COMPLETIONS);
     }
 }
 
 void setup() {
     Serial.begin(9600);
-    while (!Serial);
-    Serial1.begin(9600);
+    Serial1.begin(300);
     cursor = 0;
     lcd.begin(ncols, nrows);
 
