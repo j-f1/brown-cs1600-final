@@ -9,7 +9,7 @@ int cursor;
 #define ncols 16
 #define nrows 2
 
-#define prevButton 7
+#define prevButton 9
 #define acceptButton 8
 #define nextButton 7
 
