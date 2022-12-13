@@ -219,7 +219,7 @@ void loop() {
   // If it's been a second since the last keypress,
   // request completions from GPT-3
   if (curWordLen > 0 && !completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
-    setLedColor(255, 255, 0);
+    setLedColor(128, 128, 0);
     lastKeypressMillis = millis();
 
     bool isCompletionSuccessful = completeWord();
