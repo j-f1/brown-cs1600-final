@@ -16,7 +16,14 @@ int cursor;
 #define COMPLETION_SEP ' '
 #define END_OF_COMPLETIONS '\0'
 
+#define BUTTON_DEBOUNCE_MILLIS 250
+
 void onPrev() {
+    static int lastPressed = 0;
+    int now = millis();
+    if (now - lastPressed < BUTTON_DEBOUNCE_MILLIS) return;
+    lastPressed = now;
+    
     Serial.println("prev");
     if (cursor > 0) {
         do {
@@ -27,6 +34,11 @@ void onPrev() {
 }
 
 void onNext() {
+    static int lastPressed = 0;
+    int now = millis();
+    if (now - lastPressed < BUTTON_DEBOUNCE_MILLIS) return;
+    lastPressed = now;
+    
     Serial.println("next");
     do {
         cursor++;
@@ -38,6 +50,11 @@ void onNext() {
 }
 
 void onAccept() {
+    static int lastPressed = 0;
+    int now = millis();
+    if (now - lastPressed < BUTTON_DEBOUNCE_MILLIS) return;
+    lastPressed = now;
+    
     Serial.println("accept");
     if (words.length() > 0) {
         int endCursor = cursor;
