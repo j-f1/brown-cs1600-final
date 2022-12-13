@@ -5,6 +5,8 @@ int rows[] = {1,2,3};
 int cols[] = {4,5,6,7,8,9,0};
 #define NCOLS 7
 
+const int backspaceButton = A1;
+
 char keymap[NROWS][NCOLS] = {
   {'p', 'l', 'k', 'j', 'h', 'g', 'f'},
   {'t', 'r', 'd', 's', 'w', 'q', 'a'},
@@ -107,6 +109,9 @@ void setup() {
   setup_wifi();
   setupWDT();
 
+  pinMode(backspaceButton, INPUT);
+  attachInterrupt(digitalPinToInterrupt(backspaceButton), onBackspace, RISING);
+
   // Fill the current word buffer with nul-terminators
   memset(curWord, '\0', BUFSIZE);
   curWordLen = 0;
@@ -154,6 +159,12 @@ bool processKeypress(char c) {
   }
 }
 
+void displayCompletions(char *completedWords) {
+  Serial.println(completedWords);
+  Serial1.write(completedWords);
+  Serial1.write('\0');
+}
+
 /**
  * Sends the vowel-less word to GPT-3, and sends the results to the completion
  * display. Returns false if an error occurred.
@@ -165,9 +176,7 @@ bool completeWord() {
   completionRequested = true;
   bool completionResult = makeRequest(curWord, completedWords, BUFSIZE);
   if (completionResult) {
-    Serial.println(completedWords);
-    Serial1.write(completedWords);
-    Serial1.write('\0');
+    displayCompletions(completedWords);
     return true;
   } else {
     Serial.println("Error: failed to make word completions");
@@ -229,6 +238,8 @@ void loop() {
       setLedColor(255, 0, 0);
     }
     delay(1000);
+  } else if (curWordLen == 0) {
+    displayCompletions("");
   }
 
   acceptCompletion();
@@ -305,4 +316,15 @@ void onKeypress() {
   setAllRowOutputs(HIGH);
   lastKeypressMillis = millis();
   interrupts();
+}
+
+void onBackspace() {
+  static int lastPressed = 0;
+  int now = millis();
+  if (now - lastPressed < 100) return;
+  lastPressed = now;
+  
+  Serial.println("backspace");
+  processKeypress(KEY_BACKSPACE);
+  completionRequested = false;
 }

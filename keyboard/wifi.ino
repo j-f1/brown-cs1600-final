@@ -21,6 +21,10 @@ void setup_wifi() {
 // Requests completions from GPT-3, writing a space-separated list of words
 // into `result` on success.
 bool makeRequest(char *consonantWord, char *result, size_t result_len) {
+  if (strlen(consonantWord) == 0) {
+    Serial.println("consonantWord must not be empty");
+    return false;
+  }
   Serial.print("Requesting completions for: ");
   Serial.println(consonantWord);
   
