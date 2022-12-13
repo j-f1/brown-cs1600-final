@@ -17,7 +17,7 @@ int lastKeypressMillis;
 bool completionRequested;
 
 // Buffer setup
-#define BUFSIZE 256
+#define BUFSIZE 1024
 char curWord[BUFSIZE];
 int curWordLen;
 bool spaceAppended;
@@ -163,7 +163,7 @@ bool completeWord() {
 
   // Make the request to fill in the vowels
   completionRequested = true;
-  bool completionResult = makeRequest(curWord, completedWords, 200);
+  bool completionResult = makeRequest(curWord, completedWords, BUFSIZE);
   if (completionResult) {
     Serial.println(completedWords);
     Serial1.write(completedWords);
