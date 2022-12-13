@@ -20,9 +20,9 @@ bool completionRequested;
 
 // Buffer setup
 #define BUFSIZE 1024
-char curWord[BUFSIZE];
-int curWordLen;
-bool spaceAppended;
+char buf[BUFSIZE];
+int bufStart;
+int bufLen;
 
 // LED setup
 int rPin = A3;
@@ -113,9 +113,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(backspaceButton), onBackspace, RISING);
 
   // Fill the current word buffer with nul-terminators
-  memset(curWord, '\0', BUFSIZE);
-  curWordLen = 0;
-  spaceAppended = false;
+  memset(buf, '\0', BUFSIZE);
+  bufStart = 0;
+  bufLen = 0;
+  
   completionRequested = false;
 }
 
@@ -126,34 +127,21 @@ void setup() {
 // Returns true on success.
 bool processKeypress(char c) {
   if (c == KEY_BACKSPACE) {
-    if (spaceAppended) {
-      Keyboard.print(c);
-      spaceAppended = false;
-      return true;
-    } else if (curWordLen == 0) {
+    if (bufLen == 0) {
       return false;
     } else {
       Keyboard.print(c);
-      curWordLen--;
-      curWord[curWordLen] = '\0';
+      bufLen--;
+      buf[bufLen] = '\0';
       return true;
     }
   } else {
-    if (c == ' ' && !spaceAppended) {
-      Keyboard.print(c);
-      spaceAppended = true;
-      return true;
-    } else if (isBufferFull()) {
+    if (isBufferFull()) {
       return false;
     } else {
       Keyboard.print(c);
-      if (spaceAppended) {
-        spaceAppended = false;
-        memset(curWord, 0, curWordLen);
-        curWordLen = 0;
-      }
-      curWord[curWordLen] = c;
-      curWordLen++;
+      buf[bufLen] = c;
+      bufLen++;
       return true;
     }
   }
@@ -169,7 +157,7 @@ void displayCompletions(char *completedWords) {
  * Sends the vowel-less word to GPT-3, and sends the results to the completion
  * display. Returns false if an error occurred.
  */
-bool completeWord() {
+bool completeWord(char *curWord) {
   static char completedWords[BUFSIZE];
 
   // Make the request to fill in the vowels
@@ -207,16 +195,56 @@ bool acceptCompletion() {
     Serial.println(word);
 
     // Clear the un-voweled word and type in the completed word
-    while (curWordLen > 0) {
+    noInterrupts();
+    int charsToDelete;
+    char *curWord = getCurWord(&charsToDelete);
+    for (int i = 0; i < charsToDelete; i++) {
       processKeypress(KEY_BACKSPACE);
     }
     for (int i = 0; i < wordLen; i++) {
       processKeypress(word[i]);
     }
     processKeypress(' ');
+    interrupts();
 
     return true;
   }
+}
+
+// Returns the most recently typed (partial) word.
+// Must be called with interrupts disabled.
+// Subsequent calls invalidate previously returned pointers.
+char *getCurWord(int *startOffsetFromEnd) {
+  static char curWord[BUFSIZE];
+  memset(curWord, 0, BUFSIZE);
+  
+  int bufEnd = (bufStart+bufLen) % BUFSIZE;
+  int curWordStart = bufEnd;
+  int curWordLen = 0;
+  int trailingSpaces = 0;
+  bool seenChars = false;
+  for (int i = 0; i < bufLen; i++) {
+    int idx = (bufEnd-i-1) % BUFSIZE;
+    if (buf[idx] == ' ') {
+      if (seenChars) {
+        break;
+      } else {
+        trailingSpaces++;
+        continue;
+      }
+    } else {
+      curWordStart = idx;
+      curWordLen++;
+      seenChars = true;
+    }
+  }
+  for (int i = 0; i < curWordLen; i++) {
+    curWord[i] = buf[(curWordStart+i) % BUFSIZE];
+  }
+  if (startOffsetFromEnd) {
+    *startOffsetFromEnd = curWordLen + trailingSpaces;
+  }
+  return curWord;
 }
 
 /**
@@ -227,19 +255,22 @@ void loop() {
 
   // If it's been a second since the last keypress,
   // request completions from GPT-3
-  if (curWordLen > 0 && !completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
+  noInterrupts();
+  char *curWord = getCurWord(0);
+  interrupts();
+  if (strlen(curWord) == 0) {
+    displayCompletions("");
+  } else if (!completionRequested && millis() - lastKeypressMillis > completionDelayMillis) {
     setLedColor(128, 128, 0);
     lastKeypressMillis = millis();
 
-    bool isCompletionSuccessful = completeWord();
+    bool isCompletionSuccessful = completeWord(curWord);
     if (isCompletionSuccessful) {
       setLedColor(0, 255, 0);
     } else {
       setLedColor(255, 0, 0);
     }
     delay(1000);
-  } else if (curWordLen == 0) {
-    displayCompletions("");
   }
 
   acceptCompletion();
@@ -268,7 +299,7 @@ int getActiveColumn(int poweredRow) {
  * Returns true iff the buffer does not have space to store another letter.
  */
 bool isBufferFull() {
-  return curWordLen >= BUFSIZE;
+  return bufLen >= BUFSIZE;
 }
 
 /**
@@ -298,8 +329,8 @@ void onKeypress() {
 
     // get the previous letter
     char prevLetter = '\0';
-    if (curWordLen > 0) {
-      prevLetter = curWord[curWordLen - 1];
+    if (bufLen > 0) {
+      prevLetter = buf[bufLen - 1];
     }
 
     // check that it's not the same key being held continuously
