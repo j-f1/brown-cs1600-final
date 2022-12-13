@@ -120,7 +120,6 @@ void setup() {
 // Must be called with interrupts disabled.
 // Returns true on success.
 bool processKeypress(char c) {
-  delay(10);
   if (c == KEY_BACKSPACE) {
     if (spaceAppended) {
       Keyboard.print(c);
