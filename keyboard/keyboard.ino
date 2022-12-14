@@ -130,26 +130,20 @@ void setup() {
  * NB: Must be called with interrupts disabled.
  */
 bool processKeypress(char c) {
-  if (c == KEY_BACKSPACE) {
-    if (bufLen == 0) {
-      return false;
-    } else {
-      Keyboard.print(c);
-      bufLen--;
-      buf[bufLen] = '\0';
-      lastKeypressMillis = millis();
-      return true;
-    }
+  if (c == KEY_BACKSPACE && bufLen > 0) {
+    Keyboard.print(c);
+    bufLen--;
+    buf[(bufStart+bufLen) % BUFSIZE] = '\0';
+    lastKeypressMillis = millis();
+    return true;
+  } else if (!isBufferFull() || removeOldestWordFromBuffer()) {
+    Keyboard.print(c);
+    buf[(bufStart+bufLen) % BUFSIZE] = c;
+    bufLen++;
+    lastKeypressMillis = millis();
+    return true;
   } else {
-    if (isBufferFull()) {
-      return false;
-    } else {
-      Keyboard.print(c);
-      buf[bufLen] = c;
-      bufLen++;
-      lastKeypressMillis = millis();
-      return true;
-    }
+    return false;
   }
 }
 
@@ -256,7 +250,7 @@ char *getCurWord(int *startOffsetFromEnd) {
   static char curWord[BUFSIZE];
   memset(curWord, 0, BUFSIZE);
   
-  int bufEnd = (bufStart+bufLen) % BUFSIZE;
+  int bufEnd = bufStart+bufLen;
   int curWordStart = bufEnd;
   int curWordLen = 0;
   int trailingSpaces = 0;
@@ -341,6 +335,42 @@ bool isBufferFull() {
 }
 
 /**
+ * Removes the oldest (least recently typed) word from the buffer to free up space.
+ * Returns true on success, false if the entire buffer is made up of a single word
+ * that cannot be cleanly removed.
+ * Must be called with interrupts disabled.
+ */
+bool removeOldestWordFromBuffer() {
+  Serial.println("Removing oldest word from buffer");
+  int start = bufStart;
+  bool foundWordEnd = false;
+  for (; start < bufStart + bufLen; start++) {
+    if (buf[start % BUFSIZE] == ' ') {
+      // Found space at the end of a word
+      foundWordEnd = true;
+    } else if (foundWordEnd) {
+      // Found non-space i.e. beginning of another word
+      break;
+    }
+  }
+  if (foundWordEnd) {
+    for (int i = bufStart; i < start; i++) {
+      buf[i % BUFSIZE] = 0;
+    }
+    Serial.print("Shifting buffer start: ");
+    Serial.print(bufStart);
+    bufLen -= start - bufStart;
+    bufStart = start % BUFSIZE;
+    Serial.print(" -> ");
+    Serial.println(bufStart);
+    return true;
+  } else {
+    Serial.println("Unable to remove oldest word");
+    return false;
+  }
+}
+
+/**
  * ISR for handling keypresses. Run when a rising edge on a column is detected.
  * Subsequently, it cycles through powering each row individually to detect which row
  * the keypress occured in. Adds the resulting letter to the buffer.
@@ -367,7 +397,7 @@ void onKeypress() {
     // get the previous letter
     char prevLetter = '\0';
     if (bufLen > 0) {
-      prevLetter = buf[bufLen - 1];
+      prevLetter = buf[(bufStart+bufLen-1) % BUFSIZE];
     }
 
     // check that it's not the same key being held continuously
