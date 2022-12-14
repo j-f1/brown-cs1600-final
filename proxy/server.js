@@ -7,7 +7,7 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-const model = "text-curie-001";
+const model = "text-davinci-003";
 const pricing = {
   "text-ada-001": 0.0004,
   "text-babbage-001": 0.0005,
@@ -22,7 +22,7 @@ const fastify = require("fastify")({
 
 fastify.put("/", async function (request, reply) {
   const input = request.body;
-  console.log('got message!', input)
+  console.log('got message!', `"${input}"`)
   const token = request.headers["auth-token"];
   if (token !== process.env.AUTH_TOKEN) return reply.send("invalid token!");
   if (!input) return reply.send("empty input!");
@@ -32,13 +32,16 @@ fastify.put("/", async function (request, reply) {
   try {
     completion = await openai.createCompletion({
       model,
-      prompt: `Output up to ten valid, complete English corrections for words which are missing their vowels. Only add the letters A, E, I, O, or Y. Do not add any additional consonants or other characters in the corrections.
+      temperature: 0.5,
+      prompt: `Output up to ten valid, complete modern English corrections for words which are missing their vowels. Only add the letters A, E, I, O, or Y. Do not add any additional consonants or other characters in the corrections.
 Input: frnd
 Output: [ friend frond ]
 Input: mmr
-Output: [ immure memoir memory yammer yummier ]
+Output: [ yummier immure memoir memory ]
 Input: fld
-Output: [ afield failed field filed flayed fled flood fluid foaled fold ]
+Output: [ fluid flood failed afield foaled field filed fled flayed fold ]
+Input: crm
+Output: [ cream crime cram ]
 Input: ${input}
 Output: [`,
       stop: [' ]'],
@@ -55,7 +58,7 @@ Output: [`,
 
   console.log(completion.data.choices[0]);
 
-  return reply.send(completion.data.choices[0].text);
+  return reply.send(completion.data.choices[0].text.slice(1));
 });
 
 fastify.get("/models", async function (request, reply) {
