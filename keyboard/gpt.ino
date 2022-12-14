@@ -72,7 +72,7 @@ bool makeRequest(char *consonantWord, char *result, size_t result_len) {
       sep_idx = 0;
     }
   }
-  Serial.println("received all!");
+  Serial.println("Received response");
   result[result_idx] = 0;
   return true;
 }

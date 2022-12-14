@@ -35,7 +35,7 @@ void WDT_Handler() {
 
   // Warn user that a watchdog reset may happen
   Serial.println("Warning: watchdog reset imminent!");
-  setLedColor(255, 0, 0);
+  setLedColor(255, 0);
 }
 
 void petWatchdog() {
