@@ -388,7 +388,7 @@ void onKeypress() {
 void onBackspace() {
   static int lastPressed = 0;
   int now = millis();
-  if (now - lastPressed < 50) return;
+  if (now - lastPressed < 25) return;
   lastPressed = now;
   
   Serial.println("backspace");
