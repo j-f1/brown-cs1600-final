@@ -1,4 +1,5 @@
-#include "shared.h"
+#include <WiFi101.h>
+extern WiFiClient client;
 
 WiFiClient client;
 int status = WL_IDLE_STATUS;  // the WiFi radio's status
