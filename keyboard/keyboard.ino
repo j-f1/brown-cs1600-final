@@ -108,18 +108,16 @@ void setup() {
 
   lastKeypressMillis = millis();
 
-  setup_wifi();
-  setupWDT();
-
   pinMode(backspaceButton, INPUT);
   attachInterrupt(digitalPinToInterrupt(backspaceButton), onBackspace, RISING);
 
-  // Fill the current word buffer with nul-terminators
-  memset(buf, '\0', BUFSIZE);
-  bufStart = 0;
-  bufLen = 0;
-  
+  emptyBuffer();
   resetCompletions();
+
+  runTests();
+
+  setup_wifi();
+  setupWDT();
 }
 
 /**
@@ -325,6 +323,16 @@ int getActiveColumn(int poweredRow) {
     }
   }
   return -1;
+}
+
+/**
+ * Zeroes out the buffer and resets the start and length variables.
+ */
+void emptyBuffer() {
+  // Fill the current word buffer with nul-terminators
+  memset(buf, '\0', BUFSIZE);
+  bufStart = 0;
+  bufLen = 0;
 }
 
 /**
