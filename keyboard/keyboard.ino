@@ -143,13 +143,13 @@ void setup() {
  */
 bool processKeypress(char c) {
   if (c == KEY_BACKSPACE && bufLen > 0) {
-    Keyboard.print(c);
+    // Keyboard.print(c);
     bufLen--;
     buf[(bufStart+bufLen) % BUFSIZE] = '\0';
     lastKeypressMillis = millis();
     return true;
   } else if (!isBufferFull() || removeOldestWordFromBuffer()) {
-    Keyboard.print(c);
+    // Keyboard.print(c);
     buf[(bufStart+bufLen) % BUFSIZE] = c;
     bufLen++;
     lastKeypressMillis = millis();
