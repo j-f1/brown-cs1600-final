@@ -194,19 +194,37 @@ bool testBufOverflow() {
  * Test that accepting a completion replaces the last word in the buffer.
  */
 bool testAcceptCompletion() {
-  if (!simulateTyping("hll")) return false;
+  if (!simulateTyping("hll")) {
+    Serial.println("similateTyping failed in testAcceptCompletion");
+    return false;
+  }
 
   acceptCompletion("hallo");
-  if (!bufEquals("hallo ")) return false;
+  if (!bufEquals("hallo ")) {
+    Serial.println("testAcceptCompletion failed");
+    return false;
+  }
 
   acceptCompletion("hello");
-  if (!bufEquals("hello ")) return false;
+  if (!bufEquals("hello ")) {
+    Serial.println("testAcceptCompletion failed");
+    return false;
+  }
 
-  if (!simulateTyping("wrld")) return false;
-  if (!bufEquals("hello wrld")) return false;
+  if (!simulateTyping("wrld")) {
+    Serial.println("similateTyping failed in testAcceptCompletion");
+    return false;
+  }
+  if (!bufEquals("hello wrld")) {
+    Serial.println("testAcceptCompletion failed");
+    return false;
+  }
 
   acceptCompletion("world");
-  if (!bufEquals("hello world ")) return false;
+  if (!bufEquals("hello world ")) {
+    Serial.println("testAcceptCompletion failed");
+    return false;
+  }
 
   return true;
 }
