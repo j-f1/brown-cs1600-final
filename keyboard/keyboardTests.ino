@@ -190,10 +190,22 @@ bool testBufOverflow() {
   processKeypress(' ');
   while (bufLen < BUFSIZE) processKeypress('b');
   processKeypress('c');
-  if (bufStart == wordLen+1 && buf[bufStart] == 'b' && bufLen == BUFSIZE-wordLen-1) {
+  if (bufStart == wordLen+1 && buf[bufStart] == 'b' && bufLen == BUFSIZE-wordLen) {
     return true;
   }
-  Serial.println("testBufOverflow failed");
+  Serial.print("testBufOverflow failed: bufStart = ");
+  Serial.print(bufStart);
+  Serial.print(", expected: ");
+  Serial.print(wordLen + 1);
+  Serial.print("; buf[bufStart] = '");
+  Serial.print(buf[bufStart]);
+  Serial.print("' (");
+  Serial.print((int)buf[bufStart]);
+  Serial.print("), expected 'b'; bufLen = ");
+  Serial.print(bufLen);
+  Serial.print(", expected ");
+  Serial.println(BUFSIZE-wordLen);
+
   return false;
 }
 
