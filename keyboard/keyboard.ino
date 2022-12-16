@@ -30,7 +30,7 @@ const int gPin = A4;
 int pwmVal = 0;
 int dir = 1;
 // The LED's color should be maintained at its current value until this time
-int maintainLedColorUntilMillis = 0;
+uint maintainLedColorUntilMillis = 0;
 
 /**
  * Sets the led to the provided (r, g) value.
@@ -148,7 +148,7 @@ bool processKeypress(char c) {
 /**
  * Displays a space-separated list of completions on the LCD.
  */
-void displayCompletions(char *completedWords) {
+void displayCompletions(const char *completedWords) {
   Serial.print("Displaying completions: '");
   Serial.print(completedWords);
   Serial.println("'");
@@ -246,14 +246,14 @@ char *receiveAcceptedCompletion() {
  * it with the provided `completion`.
  * Side effects: performs the replacement on the client device and in `buf`.
  */
-void acceptCompletion(char *completion) {
+void acceptCompletion(const char *completion) {
   noInterrupts();
   int charsToDelete;
   char *curWord = getCurWord(&charsToDelete);
   for (int i = 0; i < charsToDelete; i++) {
     processKeypress(KEY_BACKSPACE);
   }
-  for (char *c = completion; *c != 0; c++) {
+  for (const char *c = completion; *c != 0; c++) {
     processKeypress(*c);
   }
   processKeypress(' ');

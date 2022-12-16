@@ -36,7 +36,7 @@ void resetState() {
 }
 
 bool simulateTyping(String input) {
-  for (int i = 0; i < input.length(); i++) {
+  for (uint i = 0; i < input.length(); i++) {
     char c = input[i];
     processKeypress(c);
     if (buf[(bufStart+bufLen-1) % BUFSIZE] != c) return false;
@@ -44,7 +44,7 @@ bool simulateTyping(String input) {
   return true;
 }
 
-bool bufEquals(char *expected) {
+bool bufEquals(const char *expected) {
   int i = 0;
   // Exhaust the buffer
   for (; i < bufLen; i++) {
@@ -95,6 +95,8 @@ int readPin(int pin) {
         return mockKeyState[mockRow][i];
       }
     }
+    // invalid pin read
+    abort();
   } else {
     return digitalRead(pin);
   }
@@ -117,6 +119,7 @@ int mockKeypress(char c) {
       }
     }
   }
+  return -1;
 }
 
 /*
