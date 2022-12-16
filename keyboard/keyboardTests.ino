@@ -1,6 +1,6 @@
 #define NTESTS 4
 bool (*tests[NTESTS])() = {
-  testLEDIdle, testKeyProcess, testBufOverflow, testAcceptCompletion,
+  testLEDIdle, testKeyProcess, testBufOverflow, testAcceptCompletion, testNoKeysPressed, testTwoKeysPressed, testOneKeyPressed
 };
 
 static bool testing = 0;
@@ -61,6 +61,7 @@ bool testLEDIdle() {
     int prev = pwmVal;
     ledIndicateIdle();
     if (abs(pwmVal-prev) != 1) {
+      Serial.println("testLEDIdle failed");
       return false;
     }
   }
@@ -116,23 +117,36 @@ int mockKeypress(char c) {
   }
 }
 
-void testNoKeysPressed() {
+/*
+ * Tests that no action is taken when no keys are pressed
+ */
+bool testNoKeysPressed() {
   onKeypress();
   if (bufLen != 0) {
     Serial.println("testNoKeysPressed failed");
+    return false;
   }
+  return true;
 }
 
-void testTwoKeysPressed() {
+/*
+ * Tests that when two keys are pressed, only one of the letter is added to buffer
+ */
+bool testTwoKeysPressed() {
   mockKeypress('x');
   mockKeypress('r');
   onKeypress();
   if (bufLen != 1) {
     Serial.println("testTwoKeysPressed failed");
+    return false;
   }
+  return true;
 }
 
-void testOneKeyPressed() {
+/*
+ * Tests a single key press registers and is added to buffer
+ */
+bool testOneKeyPressed() {
   for (int i = 0; i < NROWS; i++) {
     for (int j = 0; j < NCOLS; j++) {
       resetState();
@@ -140,16 +154,22 @@ void testOneKeyPressed() {
       onKeypress();
       if (bufLen != 1 && buf[bufStart] != keymap[i][j]) {
         Serial.println("testOneKeyPressed failed");
+        return false;
       }
     }
   }
+  return true;
 }
 
 /**
  * Test that a small number of characters can be added to an empty buffer.
  */
 bool testKeyProcess() {
-  return simulateTyping("hello");
+  if (simulateTyping("hello")) {
+    return true;
+  }
+  Serial.println("testKeyProcess failed");
+  return false;
 }
 
 /**
@@ -163,7 +183,11 @@ bool testBufOverflow() {
   processKeypress(' ');
   while (bufLen < BUFSIZE) processKeypress('b');
   processKeypress('c');
-  return (bufStart == wordLen+1 && buf[bufStart] == 'b' && bufLen == BUFSIZE-wordLen-1);
+  if (bufStart == wordLen+1 && buf[bufStart] == 'b' && bufLen == BUFSIZE-wordLen-1) {
+    return true;
+  }
+  Serial.println("testBufOverflow failed");
+  return false;
 }
 
 /**
