@@ -249,7 +249,7 @@ char *receiveAcceptedCompletion() {
 void acceptCompletion(const char *completion) {
   noInterrupts();
   int charsToDelete;
-  char *curWord = getCurWord(&charsToDelete);
+  getCurWord(&charsToDelete);
   for (int i = 0; i < charsToDelete; i++) {
     processKeypress(KEY_BACKSPACE);
   }
