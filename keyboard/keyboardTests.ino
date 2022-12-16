@@ -220,13 +220,17 @@ bool testAcceptCompletion() {
 
   acceptCompletion("hallo");
   if (!bufEquals("hallo ")) {
-    Serial.println("testAcceptCompletion failed");
+    Serial.print("testAcceptCompletion failed: hallo vs `");
+    Serial.print(&buf[bufStart]);
+    Serial.println("`");
     return false;
   }
 
   acceptCompletion("hello");
   if (!bufEquals("hello ")) {
-    Serial.println("testAcceptCompletion failed");
+    Serial.print("testAcceptCompletion failed: hello vs `");
+    Serial.print(&buf[bufStart]);
+    Serial.println("`");
     return false;
   }
 
@@ -235,13 +239,17 @@ bool testAcceptCompletion() {
     return false;
   }
   if (!bufEquals("hello wrld")) {
-    Serial.println("testAcceptCompletion failed");
+    Serial.print("testAcceptCompletion failed: hello wrld vs `");
+    Serial.print(&buf[bufStart]);
+    Serial.println("`");
     return false;
   }
 
   acceptCompletion("world");
   if (!bufEquals("hello world ")) {
-    Serial.println("testAcceptCompletion failed");
+    Serial.print("testAcceptCompletion failed: hello world vs `");
+    Serial.print(&buf[bufStart]);
+    Serial.println("`");
     return false;
   }
 
