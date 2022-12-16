@@ -1,5 +1,7 @@
-#define NTESTS 3
-bool (*tests[NTESTS])() = {testLEDIdle, testKeyProcess, testBufOverflow};
+#define NTESTS 4
+bool (*tests[NTESTS])() = {
+  testLEDIdle, testKeyProcess, testBufOverflow, testAcceptCompletion,
+};
 
 void runTests() {
   Serial.println("Running tests....");
@@ -29,6 +31,16 @@ bool simulateTyping(String input) {
   return true;
 }
 
+bool bufEquals(char *expected) {
+  int i = 0;
+  // Exhaust the buffer
+  for (; i < bufLen; i++) {
+    if (*expected == 0 || *expected != buf[(bufStart+i) % BUFSIZE]) return false;
+  }
+  // Make sure we've exhausted the expected string
+  return *expected == 0;
+}
+
 /**
  * Test that the LED's PWM duty cycle is commanded up/down by one step
  * with each call to `ledIndicateIdle()`.
@@ -43,6 +55,8 @@ bool testLEDIdle() {
   }
   return true;
 }
+
+// TODO: test pressing no keys, pressing multiple keys at once
 
 /**
  * Test that a small number of characters can be added to an empty buffer.
@@ -65,16 +79,6 @@ bool testBufOverflow() {
   return (bufStart == wordLen+1 && buf[bufStart] == 'b' && bufLen == BUFSIZE-wordLen-1);
 }
 
-bool bufEquals(char *expected) {
-  int i = 0;
-  // Exhaust the buffer
-  for (; i < bufLen; i++) {
-    if (*expected == 0 || *expected != buf[(bufStart+i) % BUFSIZE]) return false;
-  }
-  // Make sure we've exhausted the expected string
-  return *expected == 0;
-}
-
 /**
  * Test that accepting a completion replaces the last word in the buffer.
  */
@@ -95,3 +99,5 @@ bool testAcceptCompletion() {
 
   return true;
 }
+
+// TODO: test request timeout w/ watchdog
