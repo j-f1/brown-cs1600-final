@@ -6,6 +6,7 @@ int cols[] = {4,5,6,7,8,9,0};
 #define NCOLS 7
 
 const int backspaceButton = A1;
+extern bool testsDone;
 
 char keymap[NROWS][NCOLS] = {
   {'p', 'l', 'k', 'j', 'h', 'g', 'f'},
@@ -300,6 +301,11 @@ char *getCurWord(int *startOffsetFromEnd) {
  * Main loop routine.
  */
 void loop() {
+  if (!testsDone) {
+    petWatchdog();
+    return;
+  }
+
   if (millis() > maintainLedColorUntilMillis) {
     ledIndicateIdle();
   }

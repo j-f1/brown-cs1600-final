@@ -4,6 +4,7 @@ bool (*tests[])() = {
 };
 
 static bool testing = 0;
+bool testsDone = false;
 
 static bool mockKeyState[NROWS][NCOLS] = {
   {0, 0, 0, 0, 0, 0, 0},
@@ -28,6 +29,7 @@ void runTests() {
   Serial.print(", Tests Failed: ");
   Serial.println(total - passed);
   testing = 0;
+  testsDone = true;
 }
 
 void resetState() {
