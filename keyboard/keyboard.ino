@@ -76,10 +76,9 @@ void initializeRowPins() {
  * Initializes each of the column pins as an input pin, and attaches the `onKeypress` ISR to run on a rising edge.
  */
 void initializeColumnPins() {
-  // Set each column to be an input pin; attach `onKeypress` to rising edge.
+  // Set each column to be an input pin
   for (int c = 0; c < NCOLS; c++) {
     pinMode(cols[c], INPUT);
-    attachInterrupt(digitalPinToInterrupt(cols[c]), onKeypress, RISING);
   }
 }
 
@@ -110,12 +109,26 @@ void setup() {
   lastKeypressMillis = millis();
 
   pinMode(backspaceButton, INPUT);
-  attachInterrupt(digitalPinToInterrupt(backspaceButton), onBackspace, RISING);
 
   emptyBuffer();
   resetCompletions();
 
-  runTests();
+  int waitStart = millis();
+  bool shouldRunTests = true;
+  while (!Serial) {
+    if (millis() - waitStart > 4000) {
+      shouldRunTests = false;
+      break;
+    }
+  }
+  if (shouldRunTests) runTests();
+
+  attachInterrupt(digitalPinToInterrupt(backspaceButton), onBackspace, RISING);
+  // attach `onKeypress` to rising edge.
+  for (int c = 0; c < NCOLS; c++) {
+    attachInterrupt(digitalPinToInterrupt(cols[c]), onKeypress, RISING);
+  }
+
 
   setup_wifi();
   setupWDT();

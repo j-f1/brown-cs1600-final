@@ -50,9 +50,39 @@ bool bufEquals(const char *expected) {
   int i = 0;
   // Exhaust the buffer
   for (; i < bufLen; i++) {
-    if (*expected == 0 || *expected != buf[(bufStart+i) % BUFSIZE]) return false;
+    if (*expected == 0) {
+      Serial.print("bufEquals: expected nothing but got '");
+      Serial.print(buf[(bufStart+i) % BUFSIZE]);
+      Serial.print("' (");
+      Serial.print((int)buf[(bufStart+i) % BUFSIZE]);
+      Serial.print(") at index ");
+      Serial.println(i);
+      return false;
+    }
+    if (*expected != buf[(bufStart+i) % BUFSIZE]) {
+      Serial.print("bufEquals: expected '");
+      Serial.print(*expected);
+      Serial.print("' (");
+      Serial.print((int)*expected);
+      Serial.print(") but got '");
+      Serial.print(buf[(bufStart+i) % BUFSIZE]);
+      Serial.print("' (");
+      Serial.print((int)buf[(bufStart+i) % BUFSIZE]);
+      Serial.print(") at index ");
+      Serial.println(i);
+      return false;
+    }
   }
   // Make sure we've exhausted the expected string
+  if (*expected != 0) {
+    Serial.print("bufEquals: expected '");
+    Serial.print(*expected);
+    Serial.print("' (");
+    Serial.print((int)*expected);
+    Serial.print(") but got nothing at index ");
+    Serial.println(i);
+    return false;
+  }
   return *expected == 0;
 }
 
@@ -100,6 +130,7 @@ int readPin(int pin) {
     // invalid pin read
     abort();
   } else {
+    return LOW;
     return digitalRead(pin);
   }
 }
