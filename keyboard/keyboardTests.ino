@@ -1,6 +1,6 @@
-#define NTESTS 4
-bool (*tests[NTESTS])() = {
-  testLEDIdle, testKeyProcess, testBufOverflow, testAcceptCompletion, testNoKeysPressed, testTwoKeysPressed, testOneKeyPressed
+bool (*tests[])() = {
+  testLEDIdle, testKeyProcess, testBufOverflow, testAcceptCompletion, testNoKeysPressed, testTwoKeysPressed, testOneKeyPressed,
+  NULL
 };
 
 static bool testing = 0;
@@ -16,15 +16,17 @@ void runTests() {
   testing = 1;
   Serial.println("Running tests....");
   int passed = 0;
-  for (int i = 0; i < NTESTS; i++) {
+  int total = 0;
+  for (int i = 0; tests[i]; i++) {
     resetState();
     bool testPassed = tests[i]();
     passed += (int)testPassed;
+    total++;
   }
   Serial.print("Tests Passed: ");
   Serial.print(passed);
   Serial.print(", Tests Failed: ");
-  Serial.println(NTESTS-passed);
+  Serial.println(total - passed);
   testing = 0;
 }
 
