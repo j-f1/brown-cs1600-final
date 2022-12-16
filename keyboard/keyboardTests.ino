@@ -3,7 +3,17 @@ bool (*tests[NTESTS])() = {
   testLEDIdle, testKeyProcess, testBufOverflow, testAcceptCompletion,
 };
 
+static bool testing = 0;
+
+static bool mockKeyState[NROWS][NCOLS] = {
+  {0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0},
+};
+static int mockRow = -1;
+
 void runTests() {
+  testing = 1;
   Serial.println("Running tests....");
   int passed = 0;
   for (int i = 0; i < NTESTS; i++) {
@@ -15,11 +25,12 @@ void runTests() {
   Serial.print(passed);
   Serial.print(", Tests Failed: ");
   Serial.println(NTESTS-passed);
-
+  testing = 0;
 }
 
 void resetState() {
   emptyBuffer();
+  clearMockKeyState();
 }
 
 bool simulateTyping(String input) {
@@ -57,6 +68,82 @@ bool testLEDIdle() {
 }
 
 // TODO: test pressing no keys, pressing multiple keys at once
+void writePin(int pin, int val) {
+  if (testing) {
+    for (int i = 0; i < NROWS; i++) {
+      if (pin == rows[i]) {
+        if (val == LOW && mockRow == i) {
+          mockRow = -1;
+        } else if (val == HIGH && mockRow == -1) {
+          mockRow = i;
+        }
+        return;
+      }
+    }
+  } else {
+    digitalWrite(pin, val);
+  }
+}
+
+int readPin(int pin) {
+  if (testing) {
+    for (int i = 0; i < NCOLS; i++) {
+      if (pin == cols[i]) {
+        return mockKeyState[mockRow][i];
+      }
+    }
+  } else {
+    return digitalRead(pin);
+  }
+}
+
+void clearMockKeyState() {
+  for (int i = 0; i < NROWS; i++) {
+    for (int j = 0; j < NCOLS; j++) {
+      mockKeyState[i][j] = 0;
+    }
+  }
+}
+// returns the row that the key was pressed
+int mockKeypress(char c) {
+  for (int i = 0; i < NROWS; i++) {
+    for (int j = 0; j < NCOLS; j++) {
+      if (keymap[i][j] == c) {
+        mockKeyState[i][j] = 1;
+        return i;
+      }
+    }
+  }
+}
+
+void testNoKeysPressed() {
+  onKeypress();
+  if (bufLen != 0) {
+    Serial.println("testNoKeysPressed failed");
+  }
+}
+
+void testTwoKeysPressed() {
+  mockKeypress('x');
+  mockKeypress('r');
+  onKeypress();
+  if (bufLen != 1) {
+    Serial.println("testTwoKeysPressed failed");
+  }
+}
+
+void testOneKeyPressed() {
+  for (int i = 0; i < NROWS; i++) {
+    for (int j = 0; j < NCOLS; j++) {
+      resetState();
+      mockKeyState[i][j] = 1;
+      onKeypress();
+      if (bufLen != 1 && buf[bufStart] != keymap[i][j]) {
+        Serial.println("testOneKeyPressed failed");
+      }
+    }
+  }
+}
 
 /**
  * Test that a small number of characters can be added to an empty buffer.
@@ -87,13 +174,13 @@ bool testAcceptCompletion() {
 
   acceptCompletion("hallo");
   if (!bufEquals("hallo ")) return false;
-  
+
   acceptCompletion("hello");
   if (!bufEquals("hello ")) return false;
 
   if (!simulateTyping("wrld")) return false;
   if (!bufEquals("hello wrld")) return false;
-  
+
   acceptCompletion("world");
   if (!bufEquals("hello world ")) return false;
 

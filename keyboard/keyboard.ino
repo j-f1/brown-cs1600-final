@@ -45,7 +45,7 @@ void setLedColor(int r, int g) {
  */
 void ledIndicateIdle() {
   setLedColor(0, pwmVal);
-  
+
   pwmVal = constrain(pwmVal + 1 * dir, 0, 255);
   if (pwmVal >= 255 || pwmVal <= 0) {
     dir = -dir;
@@ -57,7 +57,7 @@ void ledIndicateIdle() {
  */
 void setAllRowOutputs(bool on) {
   for (int r = 0; r < NROWS; r++) {
-    digitalWrite(rows[r], on);
+    writePin(rows[r], on);
   }
 }
 
@@ -194,14 +194,14 @@ void completeCurrentWord() {
   int curWordLen;
   char *curWord = getCurWord(&curWordLen);
   interrupts();
-  
+
   if (delayElapsed || curWordLen == 0) {
     completionRequested = true;
-  
+
     if (curWordLen > 0) {
       // Indicate request is in progress
       setLedColor(128, 128);
-  
+
       if (completeWord(curWord)) {
         setLedColor(0, 255); // Indicate success
       } else {
@@ -266,7 +266,7 @@ void acceptCompletion(char *completion) {
 char *getCurWord(int *startOffsetFromEnd) {
   static char curWord[BUFSIZE];
   memset(curWord, 0, BUFSIZE);
-  
+
   int bufEnd = bufStart+bufLen;
   int curWordStart = bufEnd;
   int curWordLen = 0;
@@ -323,10 +323,10 @@ void loop() {
 int getActiveColumn(int poweredRow) {
   // power just the poweredRow
   setAllRowOutputs(LOW);
-  digitalWrite(rows[poweredRow], HIGH);
+  writePin(rows[poweredRow], HIGH);
 
   for (int c = 0; c < NCOLS; c++) {
-    if (digitalRead(cols[c]) == HIGH) {
+    if (readPin(cols[c]) == HIGH) {
       return c;
     }
   }
@@ -433,7 +433,7 @@ void onBackspace() {
   int now = millis();
   if (now - lastPressed < 25) return;
   lastPressed = now;
-  
+
   Serial.println("backspace");
   processKeypress(KEY_BACKSPACE);
   resetCompletions();
