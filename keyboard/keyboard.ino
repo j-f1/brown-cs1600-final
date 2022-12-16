@@ -241,6 +241,25 @@ char *receiveAcceptedCompletion() {
   }
 }
 
+/**
+ * Deletes the word currently at the end of the buffer and replaces
+ * it with the provided `completion`.
+ * Side effects: performs the replacement on the client device and in `buf`.
+ */
+void acceptCompletion(char *completion) {
+  noInterrupts();
+  int charsToDelete;
+  char *curWord = getCurWord(&charsToDelete);
+  for (int i = 0; i < charsToDelete; i++) {
+    processKeypress(KEY_BACKSPACE);
+  }
+  for (char *c = completion; *c != 0; c++) {
+    processKeypress(*c);
+  }
+  processKeypress(' ');
+  interrupts();
+}
+
 // Returns the most recently typed (partial) word.
 // Must be called with interrupts disabled.
 // Subsequent calls invalidate previously returned pointers.
@@ -291,18 +310,7 @@ void loop() {
 
   char *acceptedCompletion = receiveAcceptedCompletion();
   if (acceptedCompletion) {
-    // Clear the un-voweled word and type in the completed word
-    noInterrupts();
-    int charsToDelete;
-    char *curWord = getCurWord(&charsToDelete);
-    for (int i = 0; i < charsToDelete; i++) {
-      processKeypress(KEY_BACKSPACE);
-    }
-    for (char *c = acceptedCompletion; *c != 0; c++) {
-      processKeypress(*c);
-    }
-    processKeypress(' ');
-    interrupts();
+    acceptCompletion(acceptedCompletion);
   }
 
   petWatchdog();
@@ -413,9 +421,6 @@ void onKeypress() {
       processKeypress(letter);
       resetCompletions();
     }
-  }
-  else {
-     // Serial.println("Unable to detect which key was pressed.");
   }
 
   // Reset to the default state.

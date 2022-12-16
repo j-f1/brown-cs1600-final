@@ -20,6 +20,15 @@ void resetState() {
   emptyBuffer();
 }
 
+bool simulateTyping(String input) {
+  for (int i = 0; i < input.length(); i++) {
+    char c = input[i];
+    processKeypress(c);
+    if (buf[(bufStart+bufLen-1) % BUFSIZE] != c) return false;
+  }
+  return true;
+}
+
 /**
  * Test that the LED's PWM duty cycle is commanded up/down by one step
  * with each call to `ledIndicateIdle()`.
@@ -39,13 +48,7 @@ bool testLEDIdle() {
  * Test that a small number of characters can be added to an empty buffer.
  */
 bool testKeyProcess() {
-  String input = "hello";
-  for (int i = 0; i < input.length(); i++) {
-    char c = input[i];
-    processKeypress(c);
-    if (bufLen != i+1 || buf[(bufStart+bufLen-1) % BUFSIZE] != c) return false;
-  }
-  return true;
+  return simulateTyping("hello");
 }
 
 /**
@@ -60,4 +63,35 @@ bool testBufOverflow() {
   while (bufLen < BUFSIZE) processKeypress('b');
   processKeypress('c');
   return (bufStart == wordLen+1 && buf[bufStart] == 'b' && bufLen == BUFSIZE-wordLen-1);
+}
+
+bool bufEquals(char *expected) {
+  int i = 0;
+  // Exhaust the buffer
+  for (; i < bufLen; i++) {
+    if (*expected == 0 || *expected != buf[(bufStart+i) % BUFSIZE]) return false;
+  }
+  // Make sure we've exhausted the expected string
+  return *expected == 0;
+}
+
+/**
+ * Test that accepting a completion replaces the last word in the buffer.
+ */
+bool testAcceptCompletion() {
+  if (!simulateTyping("hll")) return false;
+
+  acceptCompletion("hallo");
+  if (!bufEquals("hallo ")) return false;
+  
+  acceptCompletion("hello");
+  if (!bufEquals("hello ")) return false;
+
+  if (!simulateTyping("wrld")) return false;
+  if (!bufEquals("hello wrld")) return false;
+  
+  acceptCompletion("world");
+  if (!bufEquals("hello world ")) return false;
+
+  return true;
 }
