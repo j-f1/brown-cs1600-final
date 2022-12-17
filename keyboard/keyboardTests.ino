@@ -72,6 +72,7 @@ bool bufEquals(const char *expected) {
       Serial.println(i);
       return false;
     }
+    expected++;
   }
   // Make sure we've exhausted the expected string
   if (*expected != 0) {
@@ -102,7 +103,6 @@ bool testLEDIdle() {
   return true;
 }
 
-// TODO: test pressing no keys, pressing multiple keys at once
 void writePin(int pin, int val) {
   if (testing) {
     for (int i = 0; i < NROWS; i++) {
@@ -286,5 +286,3 @@ bool testAcceptCompletion() {
 
   return true;
 }
-
-// TODO: test request timeout w/ watchdog
